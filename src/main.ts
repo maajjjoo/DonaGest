@@ -3,12 +3,14 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { TypeOrmExceptionFilter } from './common/filters/typeorm-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.setGlobalPrefix('api/v1');
   app.enableCors();
+  app.useGlobalFilters(new TypeOrmExceptionFilter());
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
