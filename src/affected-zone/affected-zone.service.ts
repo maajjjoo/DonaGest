@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, ILike, Repository } from 'typeorm';
+import { FindOptionsWhere, Repository } from 'typeorm';
 import {
   buildPaginatedResponse,
   getSkip,
@@ -29,7 +29,7 @@ export class AffectedZoneService {
     const { page, limit, department, priority, emergencyType, isActive } =
       query;
     const where: FindOptionsWhere<AffectedZone> = {};
-    if (department) where.department = ILike(department);
+    if (department) where.department = department;
     if (priority) where.priority = priority;
     if (emergencyType) where.emergencyType = emergencyType;
     if (isActive !== undefined) where.isActive = isActive;

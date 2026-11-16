@@ -6,6 +6,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { ColombianDepartment } from '../enums/colombian-department.enum';
 import { EmergencyType } from '../enums/emergency-type.enum';
 import { ZonePriority } from '../enums/zone-priority.enum';
 
@@ -19,9 +20,12 @@ export class AffectedZone {
   @Column({ type: 'varchar', length: 150 })
   name: string;
 
-  @ApiProperty({ example: 'Sucre' })
-  @Column({ type: 'varchar', length: 100 })
-  department: string;
+  @ApiProperty({
+    enum: ColombianDepartment,
+    example: ColombianDepartment.SUCRE,
+  })
+  @Column({ type: 'enum', enum: ColombianDepartment })
+  department: ColombianDepartment;
 
   @ApiProperty({ example: 'San Marcos' })
   @Column({ type: 'varchar', length: 100 })

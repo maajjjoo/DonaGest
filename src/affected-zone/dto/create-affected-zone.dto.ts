@@ -9,6 +9,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { ColombianDepartment } from '../enums/colombian-department.enum';
 import { EmergencyType } from '../enums/emergency-type.enum';
 import { ZonePriority } from '../enums/zone-priority.enum';
 
@@ -22,13 +23,16 @@ export class CreateAffectedZoneDto {
   @MaxLength(150, { message: 'El nombre no puede superar 150 caracteres' })
   name: string;
 
-  @ApiProperty({ description: 'Departamento', example: 'Sucre' })
-  @IsString({ message: 'El departamento debe ser un texto' })
-  @IsNotEmpty({ message: 'El departamento es obligatorio' })
-  @MaxLength(100, {
-    message: 'El departamento no puede superar 100 caracteres',
+  @ApiProperty({
+    description: 'Departamento de Colombia (o Bogotá D.C.)',
+    enum: ColombianDepartment,
+    example: ColombianDepartment.SUCRE,
   })
-  department: string;
+  @IsEnum(ColombianDepartment, {
+    message:
+      'El departamento debe ser uno de los 32 departamentos de Colombia o Bogotá D.C. (por ejemplo: Sucre, La Guajira, Chocó)',
+  })
+  department: ColombianDepartment;
 
   @ApiProperty({ description: 'Municipio', example: 'San Marcos' })
   @IsString({ message: 'El municipio debe ser un texto' })

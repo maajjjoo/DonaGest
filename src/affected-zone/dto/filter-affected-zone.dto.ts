@@ -1,16 +1,23 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional } from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { toBoolean } from '../../common/transformers/to-boolean.transformer';
+import { ColombianDepartment } from '../enums/colombian-department.enum';
 import { EmergencyType } from '../enums/emergency-type.enum';
 import { ZonePriority } from '../enums/zone-priority.enum';
 
 export class FilterAffectedZoneDto extends PaginationQueryDto {
-  @ApiPropertyOptional({ description: 'Departamento', example: 'Sucre' })
+  @ApiPropertyOptional({
+    enum: ColombianDepartment,
+    example: ColombianDepartment.SUCRE,
+  })
   @IsOptional()
-  @IsString({ message: 'El departamento debe ser un texto' })
-  department?: string;
+  @IsEnum(ColombianDepartment, {
+    message:
+      'El departamento debe ser uno de los 32 departamentos de Colombia o Bogotá D.C.',
+  })
+  department?: ColombianDepartment;
 
   @ApiPropertyOptional({ enum: ZonePriority, example: ZonePriority.CRITICA })
   @IsOptional()
