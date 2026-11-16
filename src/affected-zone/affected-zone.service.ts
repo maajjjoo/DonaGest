@@ -8,6 +8,7 @@ import {
 } from '../common/helpers/paginate.helper';
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 import { CreateAffectedZoneDto } from './dto/create-affected-zone.dto';
+import { UpdateAffectedZoneDto } from './dto/update-affected-zone.dto';
 import { AffectedZone } from './entities/affected-zone.entity';
 
 @Injectable()
@@ -42,5 +43,22 @@ export class AffectedZoneService {
       );
     }
     return zone;
+  }
+
+  async replace(id: string, dto: CreateAffectedZoneDto): Promise<AffectedZone> {
+    const zone = await this.findOne(id);
+    Object.assign(zone, { description: null, isActive: true }, dto);
+    return this.affectedZoneRepository.save(zone);
+  }
+
+  async update(id: string, dto: UpdateAffectedZoneDto): Promise<AffectedZone> {
+    const zone = await this.findOne(id);
+    const updated = this.affectedZoneRepository.merge(zone, dto);
+    return this.affectedZoneRepository.save(updated);
+  }
+
+  async remove(id: string): Promise<void> {
+    const zone = await this.findOne(id);
+    await this.affectedZoneRepository.remove(zone);
   }
 }
