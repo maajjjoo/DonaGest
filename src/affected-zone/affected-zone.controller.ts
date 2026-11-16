@@ -20,10 +20,10 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
-import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { UuidParamPipe } from '../common/pipes/uuid-param.pipe';
 import { AffectedZoneService } from './affected-zone.service';
 import { CreateAffectedZoneDto } from './dto/create-affected-zone.dto';
+import { FilterAffectedZoneDto } from './dto/filter-affected-zone.dto';
 import { UpdateAffectedZoneDto } from './dto/update-affected-zone.dto';
 import { AffectedZone } from './entities/affected-zone.entity';
 
@@ -42,9 +42,12 @@ export class AffectedZoneController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Listar zonas afectadas con paginación' })
+  @ApiOperation({
+    summary:
+      'Listar zonas afectadas con filtros, ordenadas de prioridad CRITICA a BAJA',
+  })
   @ApiPaginatedResponse(AffectedZone)
-  findAll(@Query() query: PaginationQueryDto) {
+  findAll(@Query() query: FilterAffectedZoneDto) {
     return this.affectedZoneService.findAll(query);
   }
 

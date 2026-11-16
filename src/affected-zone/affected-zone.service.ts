@@ -1,13 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { FindOptionsWhere, ILike, Repository } from 'typeorm';
 import {
   buildPaginatedResponse,
   getSkip,
 } from '../common/helpers/paginate.helper';
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 import { CreateAffectedZoneDto } from './dto/create-affected-zone.dto';
+import { FilterAffectedZoneDto } from './dto/filter-affected-zone.dto';
 import { UpdateAffectedZoneDto } from './dto/update-affected-zone.dto';
 import { AffectedZone } from './entities/affected-zone.entity';
 
@@ -24,11 +24,20 @@ export class AffectedZoneService {
   }
 
   async findAll(
-    query: PaginationQueryDto,
+    query: FilterAffectedZoneDto,
   ): Promise<PaginatedResponse<AffectedZone>> {
-    const { page, limit } = query;
+    const { page, limit, department, priority, emergencyType, isActive } =
+      query;
+    const where: FindOptionsWhere<AffectedZone> = {};
+    if (department) where.department = ILike(department);
+    if (priority) where.priority = priority;
+    if (emergencyType) where.emergencyType = emergencyType;
+    if (isActive !== undefined) where.isActive = isActive;
+
+    // El enum de prioridad se guarda en orden BAJA -> CRITICA, por eso DESC deja primero las críticas
     const [data, total] = await this.affectedZoneRepository.findAndCount({
-      order: { createdAt: 'DESC' },
+      where,
+      order: { priority: 'DESC', affectedFamilies: 'DESC', createdAt: 'DESC' },
       skip: getSkip(page, limit),
       take: limit,
     });
