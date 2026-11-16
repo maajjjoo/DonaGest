@@ -47,7 +47,8 @@ export class AffectedZoneService {
 
   async replace(id: string, dto: CreateAffectedZoneDto): Promise<AffectedZone> {
     const zone = await this.findOne(id);
-    Object.assign(zone, { description: null, isActive: true }, dto);
+    const { description = null, isActive = true, ...data } = dto;
+    Object.assign(zone, data, { description, isActive });
     return this.affectedZoneRepository.save(zone);
   }
 
