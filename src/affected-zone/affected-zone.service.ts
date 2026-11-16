@@ -9,6 +9,7 @@ import { PaginatedResponse } from '../common/interfaces/paginated-response.inter
 import { CreateAffectedZoneDto } from './dto/create-affected-zone.dto';
 import { FilterAffectedZoneDto } from './dto/filter-affected-zone.dto';
 import { UpdateAffectedZoneDto } from './dto/update-affected-zone.dto';
+import { UpdateZoneStatusDto } from './dto/update-zone-status.dto';
 import { AffectedZone } from './entities/affected-zone.entity';
 
 @Injectable()
@@ -65,6 +66,15 @@ export class AffectedZoneService {
     const zone = await this.findOne(id);
     const updated = this.affectedZoneRepository.merge(zone, dto);
     return this.affectedZoneRepository.save(updated);
+  }
+
+  async updateStatus(
+    id: string,
+    dto: UpdateZoneStatusDto,
+  ): Promise<AffectedZone> {
+    const zone = await this.findOne(id);
+    zone.isActive = dto.isActive;
+    return this.affectedZoneRepository.save(zone);
   }
 
   async remove(id: string): Promise<void> {

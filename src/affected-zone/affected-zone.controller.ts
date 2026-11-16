@@ -25,6 +25,7 @@ import { AffectedZoneService } from './affected-zone.service';
 import { CreateAffectedZoneDto } from './dto/create-affected-zone.dto';
 import { FilterAffectedZoneDto } from './dto/filter-affected-zone.dto';
 import { UpdateAffectedZoneDto } from './dto/update-affected-zone.dto';
+import { UpdateZoneStatusDto } from './dto/update-zone-status.dto';
 import { AffectedZone } from './entities/affected-zone.entity';
 
 @ApiTags('Zonas afectadas')
@@ -72,6 +73,22 @@ export class AffectedZoneController {
     @Body() dto: CreateAffectedZoneDto,
   ) {
     return this.affectedZoneService.replace(id, dto);
+  }
+
+  @Patch(':id/status')
+  @ApiOperation({
+    summary: 'Activar o desactivar una zona afectada',
+    description:
+      'Una zona inactiva deja de recibir nuevas entregas, pero conserva su historial.',
+  })
+  @ApiOkResponse({ type: AffectedZone })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 404, description: 'Zona no encontrada' })
+  updateStatus(
+    @Param('id', UuidParamPipe) id: string,
+    @Body() dto: UpdateZoneStatusDto,
+  ) {
+    return this.affectedZoneService.updateStatus(id, dto);
   }
 
   @Patch(':id')

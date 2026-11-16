@@ -1,3 +1,5 @@
+import { Transform } from 'class-transformer';
+import { toBoolean } from '../../common/transformers/to-boolean.transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsBoolean,
@@ -79,6 +81,7 @@ export class CreateAffectedZoneDto {
     default: true,
   })
   @IsOptional()
+  @Transform(toBoolean)
   @IsBoolean({ message: 'isActive debe ser verdadero o falso' })
   isActive?: boolean;
 }
