@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: donagest-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-donagest}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-donagest}
+      POSTGRES_DB: ${DB_NAME:-donagest_db}
+    ports:
+      - '${DB_PORT:-5432}:5432'
+    volumes:
+      - donagest_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USERNAME:-donagest} -d ${DB_NAME:-donagest_db}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  donagest_data:
