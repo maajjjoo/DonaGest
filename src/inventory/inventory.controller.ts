@@ -1,74 +1,39 @@
-import { Body, Controller, Get, Param, Put } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
+import {
+  ApiOkResponse,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { UuidParamPipe } from '../common/pipes/uuid-param.pipe';
+import { Inventory } from './entities/inventory.entity';
+import { InventoryService } from './inventory.service';
 
-interface InventoryItem {
-  id: number;
-  productId: number;
-  quantity: number;
-}
-
-const LOW_STOCK_THRESHOLD = 10;
-
+@ApiTags('Inventario')
 @Controller('inventory')
 export class InventoryController {
-  private inventoryItems: InventoryItem[] = [];
+  constructor(private readonly inventoryService: InventoryService) {}
 
   @Get()
-  getAllInventoryItems() {
-    return this.inventoryItems;
+  @ApiOperation({
+    summary: 'Consultar el inventario de todos los productos',
+  })
+  @ApiPaginatedResponse(Inventory)
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.inventoryService.findAll(query);
   }
 
-  @Get('low-stock')
-  getLowStockItems() {
-    const lowStockItems = this.inventoryItems.filter(
-      (item) => item.quantity < LOW_STOCK_THRESHOLD,
-    );
-
-    return {
-      msg: `Productos con bajo stock (menos de ${LOW_STOCK_THRESHOLD} unidades)`,
-      data: lowStockItems,
-    };
-  }
-
-  @Get(':id')
-  getInventoryItemById(@Param('id') id: number) {
-    const inventoryItem = this.inventoryItems.find(
-      (item) => item.id === Number(id),
-    );
-
-    if (inventoryItem) {
-      return {
-        msg: `Artículo de inventario con id ${id} encontrado`,
-        data: inventoryItem,
-      };
-    } else {
-      return {
-        msg: `Artículo de inventario con id ${id} no encontrado`,
-      };
-    }
-  }
-
-  @Put(':id')
-  updateInventoryItem(
-    @Param('id') id: number,
-    @Body() updatedItem: InventoryItem,
-  ) {
-    const itemIndex = this.inventoryItems.findIndex(
-      (item) => item.id === Number(id),
-    );
-
-    if (itemIndex === -1) {
-      return {
-        msg: `Artículo de inventario con id ${id} no encontrado`,
-      };
-    }
-
-    this.inventoryItems[itemIndex] = {
-      ...this.inventoryItems[itemIndex],
-      ...updatedItem,
-    };
-    return {
-      msg: `Artículo de inventario con id ${id} actualizado exitosamente`,
-      data: this.inventoryItems[itemIndex],
-    };
+  @Get('product/:productId')
+  @ApiOperation({ summary: 'Consultar el inventario de un producto' })
+  @ApiOkResponse({ type: Inventory })
+  @ApiResponse({ status: 400, description: 'El id no es un UUID válido' })
+  @ApiResponse({
+    status: 404,
+    description: 'No existe inventario para ese producto',
+  })
+  findByProduct(@Param('productId', UuidParamPipe) productId: string) {
+    return this.inventoryService.findByProduct(productId);
   }
 }

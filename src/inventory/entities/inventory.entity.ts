@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   Column,
   CreateDateColumn,
@@ -16,6 +16,7 @@ export class Inventory {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @ApiPropertyOptional({ type: () => Product })
   @OneToOne(() => Product, (product) => product.inventory, {
     onDelete: 'CASCADE',
     nullable: false,
