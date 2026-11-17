@@ -12,6 +12,7 @@ import {
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 import { CreateDonorDto } from './dto/create-donor.dto';
 import { FilterDonorDto } from './dto/filter-donor.dto';
+import { UpdateDonorDto } from './dto/update-donor.dto';
 import { Donor } from './entities/donor.entity';
 
 @Injectable()
@@ -53,6 +54,25 @@ export class DonorService {
       throw new NotFoundException(`No se encontró el donante con id ${id}`);
     }
     return donor;
+  }
+
+  async replace(id: string, dto: CreateDonorDto): Promise<Donor> {
+    const donor = await this.findOne(id);
+    await this.ensureUnique(dto.documentNumber, dto.email, id);
+    Object.assign(donor, dto);
+    return this.donorRepository.save(donor);
+  }
+
+  async update(id: string, dto: UpdateDonorDto): Promise<Donor> {
+    const donor = await this.findOne(id);
+    await this.ensureUnique(dto.documentNumber, dto.email, id);
+    const updated = this.donorRepository.merge(donor, dto);
+    return this.donorRepository.save(updated);
+  }
+
+  async remove(id: string): Promise<void> {
+    const donor = await this.findOne(id);
+    await this.donorRepository.remove(donor);
   }
 
   private async ensureUnique(
