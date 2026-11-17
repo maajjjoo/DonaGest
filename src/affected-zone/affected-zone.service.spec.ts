@@ -43,6 +43,7 @@ describe('AffectedZoneService', () => {
         Object.assign(zone, changes),
       ),
       remove: jest.fn(),
+      createQueryBuilder: jest.fn(),
     };
 
     const moduleRef = await Test.createTestingModule({
@@ -197,5 +198,63 @@ describe('AffectedZoneService', () => {
       NotFoundException,
     );
     expect(repository.remove).not.toHaveBeenCalled();
+  });
+
+  it('agrupa zonas y familias por departamento y convierte a número', async () => {
+    const queryBuilder = {
+      select: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      getRawMany: jest.fn().mockResolvedValue([
+        {
+          department: ColombianDepartment.SUCRE,
+          zones: '2',
+          activeZones: '1',
+          affectedFamilies: '1570',
+        },
+        {
+          department: ColombianDepartment.CHOCO,
+          zones: '1',
+          activeZones: '1',
+          affectedFamilies: '430',
+        },
+      ]),
+    };
+    repository.createQueryBuilder?.mockReturnValue(queryBuilder);
+
+    const result = await service.getStatsByDepartment();
+
+    expect(queryBuilder.groupBy).toHaveBeenCalledWith('zone.department');
+    expect(queryBuilder.orderBy).toHaveBeenCalledWith(
+      '"affectedFamilies"',
+      'DESC',
+    );
+    expect(result).toEqual([
+      {
+        department: ColombianDepartment.SUCRE,
+        zones: 2,
+        activeZones: 1,
+        affectedFamilies: 1570,
+      },
+      {
+        department: ColombianDepartment.CHOCO,
+        zones: 1,
+        activeZones: 1,
+        affectedFamilies: 430,
+      },
+    ]);
+  });
+
+  it('devuelve una lista vacía si no hay zonas', async () => {
+    repository.createQueryBuilder?.mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      getRawMany: jest.fn().mockResolvedValue([]),
+    });
+
+    await expect(service.getStatsByDepartment()).resolves.toEqual([]);
   });
 });
