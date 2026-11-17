@@ -1,9 +1,15 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiOkResponse,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { UuidParamPipe } from '../common/pipes/uuid-param.pipe';
 import { DonationService } from './donation.service';
+import { DonorSummaryDto } from './dto/donor-summary.dto';
 import { Donation } from './entities/donation.entity';
 
 @ApiTags('Donantes')
@@ -24,5 +30,18 @@ export class DonorDonationsController {
     @Query() query: PaginationQueryDto,
   ) {
     return this.donationService.findByDonor(id, query);
+  }
+
+  @Get(':id/summary')
+  @ApiOperation({
+    summary: 'Resumen de un donante',
+    description:
+      'Número de donaciones (recibidas y anuladas), unidades donadas, productos distintos y fecha de la última donación recibida.',
+  })
+  @ApiOkResponse({ type: DonorSummaryDto })
+  @ApiResponse({ status: 400, description: 'El id no es un UUID válido' })
+  @ApiResponse({ status: 404, description: 'Donante no encontrado' })
+  getSummary(@Param('id', UuidParamPipe) id: string) {
+    return this.donationService.getDonorSummary(id);
   }
 }

@@ -17,6 +17,7 @@ import { InventoryService } from '../inventory/inventory.service';
 import { Product } from '../product/entities/product.entity';
 import { CreateDonationDto } from './dto/create-donation.dto';
 import { DonationSummaryItemDto } from './dto/donation-summary.dto';
+import { DonorSummaryDto } from './dto/donor-summary.dto';
 import { FilterDonationDto } from './dto/filter-donation.dto';
 import { Donation } from './entities/donation.entity';
 import { DonationStatus } from './enums/donation-status.enum';
@@ -123,6 +124,58 @@ export class DonationService {
   ): Promise<PaginatedResponse<Donation>> {
     await this.donorService.findOne(donorId);
     return this.findAll({ page: query.page, limit: query.limit, donorId });
+  }
+
+  async getDonorSummary(donorId: string): Promise<DonorSummaryDto> {
+    const donor = await this.donorService.findOne(donorId);
+
+    const row = await this.donationRepository
+      .createQueryBuilder('donation')
+      .select('COUNT(donation.id)', 'totalDonations')
+      .addSelect(
+        'COUNT(donation.id) FILTER (WHERE donation.status = :received)',
+        'receivedDonations',
+      )
+      .addSelect(
+        'COUNT(donation.id) FILTER (WHERE donation.status = :cancelled)',
+        'cancelledDonations',
+      )
+      .addSelect(
+        'COALESCE(SUM(donation.quantity) FILTER (WHERE donation.status = :received), 0)',
+        'unitsDonated',
+      )
+      .addSelect(
+        'COUNT(DISTINCT donation.product_id) FILTER (WHERE donation.status = :received)',
+        'productsDonated',
+      )
+      .addSelect(
+        'MAX(donation.createdAt) FILTER (WHERE donation.status = :received)',
+        'lastDonationAt',
+      )
+      .where('donation.donor_id = :donorId', { donorId })
+      .setParameters({
+        received: DonationStatus.RECIBIDA,
+        cancelled: DonationStatus.ANULADA,
+      })
+      .getRawOne<{
+        totalDonations: string;
+        receivedDonations: string;
+        cancelledDonations: string;
+        unitsDonated: string;
+        productsDonated: string;
+        lastDonationAt: Date | null;
+      }>();
+
+    return {
+      donorId: donor.id,
+      fullName: donor.fullName,
+      totalDonations: Number(row?.totalDonations ?? 0),
+      receivedDonations: Number(row?.receivedDonations ?? 0),
+      cancelledDonations: Number(row?.cancelledDonations ?? 0),
+      unitsDonated: Number(row?.unitsDonated ?? 0),
+      productsDonated: Number(row?.productsDonated ?? 0),
+      lastDonationAt: row?.lastDonationAt ?? null,
+    };
   }
 
   async getSummary(): Promise<DonationSummaryItemDto[]> {

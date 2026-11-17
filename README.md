@@ -264,7 +264,8 @@ Todas las rutas usan el prefijo `/api/v1`. Los listados son paginados con `page`
 | Método | Ruta | Descripción | Códigos |
 |---|---|---|---|
 | POST | `/affected-zones` | Registrar una zona | 201, 400 |
-| GET | `/affected-zones` | Listar con filtros `department`, `priority`, `emergencyType`, `isActive` (de CRITICA a BAJA) | 200, 400 |
+| GET | `/affected-zones` | Listar con `search` (nombre o municipio) y filtros `department`, `priority`, `emergencyType`, `isActive` (de CRITICA a BAJA) | 200, 400 |
+| GET | `/affected-zones/stats` | Zonas y familias afectadas por departamento | 200 |
 | GET | `/affected-zones/:id` | Consultar una zona | 200, 400, 404 |
 | PUT | `/affected-zones/:id` | Reemplazar todos los datos | 200, 400, 404 |
 | PATCH | `/affected-zones/:id` | Actualizar algunos datos | 200, 400, 404 |
@@ -283,6 +284,7 @@ Todas las rutas usan el prefijo `/api/v1`. Los listados son paginados con `page`
 | PATCH | `/donors/:id` | Actualizar algunos datos | 200, 400, 404, 409 |
 | DELETE | `/donors/:id` | Eliminar (si no tiene donaciones) | 204, 404, 409 |
 | GET | `/donors/:id/donations` | Historial de donaciones | 200, 400, 404 |
+| GET | `/donors/:id/summary` | Donaciones y unidades donadas por el donante | 200, 400, 404 |
 
 ### Productos
 
@@ -379,20 +381,24 @@ Todas las rutas usan el prefijo `/api/v1`. Los listados son paginados con `page`
 | 409 | Dato repetido, registro relacionado con otros datos o stock insuficiente |
 | 503 | La base de datos no responde (`/health`) |
 
-Los errores tienen este formato y los mensajes están en español:
+Todos los errores pasan por el filtro global `AllExceptionsFilter` y tienen el mismo formato. Los mensajes están en español:
 
 ```json
 {
   "statusCode": 409,
   "error": "Conflict",
-  "message": "Stock insuficiente: disponible 180, solicitado 500"
+  "message": "Stock insuficiente: disponible 180, solicitado 500",
+  "path": "/api/v1/deliveries",
+  "timestamp": "2026-11-17T14:00:00.000Z"
 }
 ```
 
-El filtro global `TypeOrmExceptionFilter` traduce los errores de PostgreSQL:
-
-- `23505` → 409 "El registro ya existe".
-- `23503` → 409 "No se puede completar la operación porque el registro está relacionado con otros datos".
+- En los errores de validación, `message` es una lista con todos los problemas encontrados.
+- Los errores de PostgreSQL los traduce `TypeOrmExceptionFilter`:
+  - `23505` → 409 "El registro ya existe".
+  - `23503` → 409 "No se puede completar la operación porque el registro está relacionado con otros datos".
+- Al eliminar un donante que tiene donaciones, el mensaje dice el nombre del donante.
+- Cualquier error inesperado responde 500 sin mostrar detalles internos y queda registrado en la consola.
 
 ---
 

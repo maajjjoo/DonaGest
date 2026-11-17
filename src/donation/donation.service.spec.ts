@@ -33,7 +33,11 @@ const buildDonation = (status = DonationStatus.RECIBIDA): Donation =>
 
 describe('DonationService', () => {
   let service: DonationService;
-  let repository: { findOne: jest.Mock; findAndCount: jest.Mock };
+  let repository: {
+    findOne: jest.Mock;
+    findAndCount: jest.Mock;
+    createQueryBuilder: jest.Mock;
+  };
   let inventoryService: { increaseStock: jest.Mock; decreaseStock: jest.Mock };
   let donorService: { findOne: jest.Mock };
   let manager: { findOne: jest.Mock; save: jest.Mock; create: jest.Mock };
@@ -42,6 +46,7 @@ describe('DonationService', () => {
     repository = {
       findOne: jest.fn().mockResolvedValue(buildDonation()),
       findAndCount: jest.fn().mockResolvedValue([[], 0]),
+      createQueryBuilder: jest.fn(),
     };
     inventoryService = {
       increaseStock: jest.fn(),
@@ -172,6 +177,75 @@ describe('DonationService', () => {
       expect(repository.findAndCount).toHaveBeenCalledWith(
         expect.objectContaining({ where: { donor: { id: DONOR_ID } } }),
       );
+    });
+  });
+
+  describe('getDonorSummary', () => {
+    const buildQueryBuilder = (row: Record<string, unknown> | undefined) => ({
+      select: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      setParameters: jest.fn().mockReturnThis(),
+      getRawOne: jest.fn().mockResolvedValue(row),
+    });
+
+    it('devuelve las donaciones y unidades donadas del donante', async () => {
+      const lastDonationAt = new Date('2026-11-17T14:00:00Z');
+      const queryBuilder = buildQueryBuilder({
+        totalDonations: '5',
+        receivedDonations: '4',
+        cancelledDonations: '1',
+        unitsDonated: '860',
+        productsDonated: '3',
+        lastDonationAt,
+      });
+      repository.createQueryBuilder.mockReturnValue(queryBuilder);
+
+      const result = await service.getDonorSummary(DONOR_ID);
+
+      expect(queryBuilder.where).toHaveBeenCalledWith(
+        'donation.donor_id = :donorId',
+        { donorId: DONOR_ID },
+      );
+      expect(result).toEqual({
+        donorId: DONOR_ID,
+        fullName: 'Fundación Bolívar',
+        totalDonations: 5,
+        receivedDonations: 4,
+        cancelledDonations: 1,
+        unitsDonated: 860,
+        productsDonated: 3,
+        lastDonationAt,
+      });
+    });
+
+    it('devuelve ceros si el donante no tiene donaciones', async () => {
+      repository.createQueryBuilder.mockReturnValue(
+        buildQueryBuilder({
+          totalDonations: '0',
+          receivedDonations: '0',
+          cancelledDonations: '0',
+          unitsDonated: '0',
+          productsDonated: '0',
+          lastDonationAt: null,
+        }),
+      );
+
+      const result = await service.getDonorSummary(DONOR_ID);
+
+      expect(result.unitsDonated).toBe(0);
+      expect(result.lastDonationAt).toBeNull();
+    });
+
+    it('lanza 404 si el donante no existe', async () => {
+      donorService.findOne.mockRejectedValueOnce(
+        new NotFoundException('No se encontró el donante'),
+      );
+
+      await expect(service.getDonorSummary(DONOR_ID)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(repository.createQueryBuilder).not.toHaveBeenCalled();
     });
   });
 });
