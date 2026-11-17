@@ -9,6 +9,7 @@ import { ApiPaginatedResponse } from '../common/decorators/api-paginated-respons
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { UuidParamPipe } from '../common/pipes/uuid-param.pipe';
 import { AdjustInventoryDto } from './dto/adjust-inventory.dto';
+import { FilterAlertsDto } from './dto/filter-alerts.dto';
 import { UpdateMinimumStockDto } from './dto/update-minimum-stock.dto';
 import { InventoryAdjustment } from './entities/inventory-adjustment.entity';
 import { Inventory } from './entities/inventory.entity';
@@ -32,10 +33,10 @@ export class InventoryController {
   @ApiOperation({
     summary: 'Listar productos con stock en el mínimo o por debajo',
     description:
-      'Aparecen primero los productos a los que más les falta para llegar a su stock mínimo.',
+      'Aparecen primero los productos a los que más les falta para llegar a su stock mínimo. Se puede filtrar por categoría.',
   })
   @ApiPaginatedResponse(Inventory)
-  findAlerts(@Query() query: PaginationQueryDto) {
+  findAlerts(@Query() query: FilterAlertsDto) {
     return this.inventoryService.findAlerts(query);
   }
 
