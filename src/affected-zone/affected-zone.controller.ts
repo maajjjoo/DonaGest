@@ -3,113 +3,116 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
+  Patch,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
+import {
+  ApiCreatedResponse,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
+import { UuidParamPipe } from '../common/pipes/uuid-param.pipe';
+import { AffectedZoneService } from './affected-zone.service';
+import { CreateAffectedZoneDto } from './dto/create-affected-zone.dto';
+import { FilterAffectedZoneDto } from './dto/filter-affected-zone.dto';
+import { UpdateAffectedZoneDto } from './dto/update-affected-zone.dto';
+import { UpdateZoneStatusDto } from './dto/update-zone-status.dto';
+import { AffectedZone } from './entities/affected-zone.entity';
 
-interface AffectedZone {
-  id: number;
-  name: string;
-  location: string;
-  description: string;
-  needs: string[];
-}
-
+@ApiTags('Zonas afectadas')
 @Controller('affected-zones')
 export class AffectedZoneController {
-  private affectedZones: AffectedZone[] = [];
+  constructor(private readonly affectedZoneService: AffectedZoneService) {}
+
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Registrar una zona afectada por una emergencia' })
+  @ApiCreatedResponse({ description: 'Zona registrada', type: AffectedZone })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  create(@Body() dto: CreateAffectedZoneDto) {
+    return this.affectedZoneService.create(dto);
+  }
 
   @Get()
-  getAllAffectedZones() {
-    return this.affectedZones;
+  @ApiOperation({
+    summary:
+      'Listar zonas afectadas con filtros, ordenadas de prioridad CRITICA a BAJA',
+  })
+  @ApiPaginatedResponse(AffectedZone)
+  findAll(@Query() query: FilterAffectedZoneDto) {
+    return this.affectedZoneService.findAll(query);
   }
 
   @Get(':id')
-  getAffectedZoneById(@Param('id') id: number) {
-    const affectedZone = this.affectedZones.find(
-      (zone) => zone.id === Number(id),
-    );
-
-    if (affectedZone) {
-      return {
-        msg: `Zona afectada con id ${id} encontrada`,
-        data: affectedZone,
-      };
-    } else {
-      return {
-        msg: `Zona afectada con id ${id} no encontrada`,
-      };
-    }
-  }
-
-  @Get(':id/needs')
-  getAffectedZoneNeeds(@Param('id') id: number) {
-    const affectedZone = this.affectedZones.find(
-      (zone) => zone.id === Number(id),
-    );
-
-    if (affectedZone) {
-      return {
-        msg: `Necesidades de la zona afectada con id ${id}`,
-        data: affectedZone.needs,
-      };
-    } else {
-      return {
-        msg: `Zona afectada con id ${id} no encontrada`,
-      };
-    }
-  }
-
-  @Post()
-  createAffectedZone(@Body() affectedZone: AffectedZone) {
-    this.affectedZones.push(affectedZone);
-    return {
-      msg: 'Zona afectada creada exitosamente',
-      data: affectedZone,
-    };
+  @ApiOperation({ summary: 'Consultar una zona afectada por su id' })
+  @ApiOkResponse({ type: AffectedZone })
+  @ApiResponse({ status: 400, description: 'El id no es un UUID válido' })
+  @ApiResponse({ status: 404, description: 'Zona no encontrada' })
+  findOne(@Param('id', UuidParamPipe) id: string) {
+    return this.affectedZoneService.findOne(id);
   }
 
   @Put(':id')
-  updateAffectedZone(
-    @Param('id') id: number,
-    @Body() updatedZone: AffectedZone,
+  @ApiOperation({
+    summary: 'Reemplazar todos los datos de una zona afectada',
+  })
+  @ApiOkResponse({ type: AffectedZone })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 404, description: 'Zona no encontrada' })
+  replace(
+    @Param('id', UuidParamPipe) id: string,
+    @Body() dto: CreateAffectedZoneDto,
   ) {
-    const zoneIndex = this.affectedZones.findIndex(
-      (zone) => zone.id === Number(id),
-    );
+    return this.affectedZoneService.replace(id, dto);
+  }
 
-    if (zoneIndex === -1) {
-      return {
-        msg: `Zona afectada con id ${id} no encontrada`,
-      };
-    }
+  @Patch(':id/status')
+  @ApiOperation({
+    summary: 'Activar o desactivar una zona afectada',
+    description:
+      'Una zona inactiva deja de recibir nuevas entregas, pero conserva su historial.',
+  })
+  @ApiOkResponse({ type: AffectedZone })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 404, description: 'Zona no encontrada' })
+  updateStatus(
+    @Param('id', UuidParamPipe) id: string,
+    @Body() dto: UpdateZoneStatusDto,
+  ) {
+    return this.affectedZoneService.updateStatus(id, dto);
+  }
 
-    this.affectedZones[zoneIndex] = {
-      ...this.affectedZones[zoneIndex],
-      ...updatedZone,
-    };
-    return {
-      msg: `Zona afectada con id ${id} actualizada exitosamente`,
-      data: this.affectedZones[zoneIndex],
-    };
+  @Patch(':id')
+  @ApiOperation({ summary: 'Actualizar parcialmente una zona afectada' })
+  @ApiOkResponse({ type: AffectedZone })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 404, description: 'Zona no encontrada' })
+  update(
+    @Param('id', UuidParamPipe) id: string,
+    @Body() dto: UpdateAffectedZoneDto,
+  ) {
+    return this.affectedZoneService.update(id, dto);
   }
 
   @Delete(':id')
-  deleteAffectedZone(@Param('id') id: number) {
-    const zoneIndex = this.affectedZones.findIndex(
-      (zone) => zone.id === Number(id),
-    );
-
-    if (zoneIndex === -1) {
-      return {
-        msg: `Zona afectada con id ${id} no encontrada`,
-      };
-    }
-
-    this.affectedZones.splice(zoneIndex, 1);
-    return {
-      msg: `Zona afectada con id ${id} eliminada exitosamente`,
-    };
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Eliminar una zona afectada' })
+  @ApiNoContentResponse({ description: 'Zona eliminada' })
+  @ApiResponse({ status: 404, description: 'Zona no encontrada' })
+  @ApiResponse({
+    status: 409,
+    description: 'La zona tiene entregas registradas y no se puede eliminar',
+  })
+  remove(@Param('id', UuidParamPipe) id: string) {
+    return this.affectedZoneService.remove(id);
   }
 }
