@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, Repository } from 'typeorm';
+import { FindOptionsWhere, ILike, Repository } from 'typeorm';
+import { escapeLike } from '../common/helpers/escape-like.helper';
 import {
   buildPaginatedResponse,
   getSkip,
@@ -27,8 +28,15 @@ export class AffectedZoneService {
   async findAll(
     query: FilterAffectedZoneDto,
   ): Promise<PaginatedResponse<AffectedZone>> {
-    const { page, limit, department, priority, emergencyType, isActive } =
-      query;
+    const {
+      page,
+      limit,
+      search,
+      department,
+      priority,
+      emergencyType,
+      isActive,
+    } = query;
     const where: FindOptionsWhere<AffectedZone> = {};
     if (department) where.department = department;
     if (priority) where.priority = priority;
@@ -36,8 +44,15 @@ export class AffectedZoneService {
     if (isActive !== undefined) where.isActive = isActive;
 
     // El enum de prioridad se guarda en orden BAJA -> CRITICA, por eso DESC deja primero las críticas
+    const pattern = search ? ILike(`%${escapeLike(search)}%`) : undefined;
+
     const [data, total] = await this.affectedZoneRepository.findAndCount({
-      where,
+      where: pattern
+        ? [
+            { ...where, name: pattern },
+            { ...where, municipality: pattern },
+          ]
+        : where,
       order: { priority: 'DESC', affectedFamilies: 'DESC', createdAt: 'DESC' },
       skip: getSkip(page, limit),
       take: limit,

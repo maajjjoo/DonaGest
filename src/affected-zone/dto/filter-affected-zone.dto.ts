@@ -1,6 +1,12 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsEnum, IsOptional } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { toBoolean } from '../../common/transformers/to-boolean.transformer';
 import { ColombianDepartment } from '../enums/colombian-department.enum';
@@ -8,6 +14,15 @@ import { EmergencyType } from '../enums/emergency-type.enum';
 import { ZonePriority } from '../enums/zone-priority.enum';
 
 export class FilterAffectedZoneDto extends PaginationQueryDto {
+  @ApiPropertyOptional({
+    description: 'Busca por nombre de la zona o municipio',
+    example: 'san marcos',
+  })
+  @IsOptional()
+  @IsString({ message: 'La búsqueda debe ser un texto' })
+  @MaxLength(100, { message: 'La búsqueda no puede superar 100 caracteres' })
+  search?: string;
+
   @ApiPropertyOptional({
     enum: ColombianDepartment,
     example: ColombianDepartment.SUCRE,
