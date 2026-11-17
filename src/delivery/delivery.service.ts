@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { AffectedZone } from '../affected-zone/entities/affected-zone.entity';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { getTodayInColombia } from '../common/helpers/date.helper';
 import {
   buildPaginatedResponse,
   getSkip,
@@ -27,6 +28,13 @@ export class DeliveryService {
   ) {}
 
   async create(dto: CreateDeliveryDto): Promise<Delivery> {
+    const today = getTodayInColombia();
+    if (dto.scheduledDate < today) {
+      throw new BadRequestException(
+        `La fecha programada (${dto.scheduledDate}) no puede ser anterior a hoy (${today})`,
+      );
+    }
+
     const deliveryId = await this.dataSource.transaction(async (manager) => {
       const zone = await manager.findOne(AffectedZone, {
         where: { id: dto.affectedZoneId },

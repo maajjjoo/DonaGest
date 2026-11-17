@@ -32,12 +32,12 @@ export class DeliveryController {
   @ApiOperation({
     summary: 'Programar una entrega a una zona afectada',
     description:
-      'La zona debe existir y estar activa. La cantidad se descuenta del inventario en la misma transacción en que se guarda la entrega.',
+      'La zona debe existir y estar activa, y la fecha no puede estar en el pasado (hora de Colombia). La cantidad se descuenta del inventario en la misma transacción en que se guarda la entrega.',
   })
   @ApiCreatedResponse({ description: 'Entrega programada', type: Delivery })
   @ApiResponse({
     status: 400,
-    description: 'Datos inválidos o la zona está inactiva',
+    description: 'Datos inválidos, fecha en el pasado o zona inactiva',
   })
   @ApiResponse({ status: 404, description: 'No existe la zona o el producto' })
   @ApiResponse({ status: 409, description: 'Stock insuficiente' })
