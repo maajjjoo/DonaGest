@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { DataSource, EntityManager } from 'typeorm';
+import { DataSource, EntityManager, LessThan } from 'typeorm';
 import { AffectedZoneService } from '../affected-zone/affected-zone.service';
 import { AffectedZone } from '../affected-zone/entities/affected-zone.entity';
 import { addDays, getTodayInColombia } from '../common/helpers/date.helper';
@@ -42,6 +42,7 @@ describe('DeliveryService', () => {
   let service: DeliveryService;
   let inventoryService: { increaseStock: jest.Mock; decreaseStock: jest.Mock };
   let manager: { findOne: jest.Mock; save: jest.Mock; create: jest.Mock };
+  let repository: { findOne: jest.Mock; find: jest.Mock; save: jest.Mock };
 
   beforeEach(async () => {
     inventoryService = {
@@ -60,10 +61,12 @@ describe('DeliveryService', () => {
         work(manager as unknown as EntityManager),
       ),
     };
-    const repository = {
+    repository = {
       findOne: jest
         .fn()
         .mockResolvedValue(buildDelivery(DeliveryStatus.PROGRAMADA)),
+      find: jest.fn(),
+      save: jest.fn((delivery: Delivery) => Promise.resolve(delivery)),
     };
 
     const moduleRef = await Test.createTestingModule({
@@ -265,6 +268,53 @@ describe('DeliveryService', () => {
       await expect(
         service.reschedule(DELIVERY_ID, { scheduledDate: nextWeek }),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('updateNotes', () => {
+    it('guarda las nuevas observaciones', async () => {
+      const result = await service.updateNotes(DELIVERY_ID, {
+        notes: 'La vía está cerrada; se usará la ruta por Majagual',
+      });
+
+      expect(result.notes).toBe(
+        'La vía está cerrada; se usará la ruta por Majagual',
+      );
+      expect(repository.save).toHaveBeenCalled();
+    });
+
+    it('borra las observaciones si se envía un texto vacío', async () => {
+      const result = await service.updateNotes(DELIVERY_ID, { notes: '' });
+
+      expect(result.notes).toBeNull();
+    });
+
+    it('lanza 404 si la entrega no existe', async () => {
+      repository.findOne.mockResolvedValueOnce(null);
+
+      await expect(
+        service.updateNotes(DELIVERY_ID, { notes: 'x' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('findOverdue', () => {
+    it('busca entregas PROGRAMADAS con fecha anterior a hoy', async () => {
+      const overdue = [buildDelivery(DeliveryStatus.PROGRAMADA)];
+      repository.find.mockResolvedValue(overdue);
+
+      const result = await service.findOverdue();
+
+      expect(repository.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            status: DeliveryStatus.PROGRAMADA,
+            scheduledDate: LessThan(getTodayInColombia()),
+          },
+          order: { scheduledDate: 'ASC', affectedZone: { priority: 'DESC' } },
+        }),
+      );
+      expect(result).toBe(overdue);
     });
   });
 });
