@@ -1,0 +1,1 @@
+export const MAX_DONATION_QUANTITY = 10000;

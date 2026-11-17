@@ -1,19 +1,31 @@
 import { Module } from '@nestjs/common';
-import { DonorController } from './donor/donor.controller';
-import { DonationController } from './donation/donation.controller';
-import { ProductController } from './product/product.controller';
-import { InventoryController } from './inventory/inventory.controller';
-import { AffectedZoneController } from './affected-zone/affected-zone.controller';
-import { DeliveryController } from './delivery/delivery.controller';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { databaseConfig } from './config/database.config';
+import { AffectedZoneModule } from './affected-zone/affected-zone.module';
+import { DonorModule } from './donor/donor.module';
+import { ProductModule } from './product/product.module';
+import { InventoryModule } from './inventory/inventory.module';
+import { DonationModule } from './donation/donation.module';
+import { DeliveryModule } from './delivery/delivery.module';
+import { ReportModule } from './report/report.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
-  controllers: [
-    DonorController,
-    DonationController,
-    ProductController,
-    InventoryController,
-    AffectedZoneController,
-    DeliveryController,
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: databaseConfig,
+    }),
+    AffectedZoneModule,
+    DonorModule,
+    ProductModule,
+    InventoryModule,
+    DonationModule,
+    DeliveryModule,
+    ReportModule,
+    HealthModule,
   ],
 })
 export class AppModule {}
