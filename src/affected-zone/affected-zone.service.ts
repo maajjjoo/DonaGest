@@ -8,10 +8,12 @@ import {
 } from '../common/helpers/paginate.helper';
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 import { CreateAffectedZoneDto } from './dto/create-affected-zone.dto';
+import { DepartmentStatsDto } from './dto/department-stats.dto';
 import { FilterAffectedZoneDto } from './dto/filter-affected-zone.dto';
 import { UpdateAffectedZoneDto } from './dto/update-affected-zone.dto';
 import { UpdateZoneStatusDto } from './dto/update-zone-status.dto';
 import { AffectedZone } from './entities/affected-zone.entity';
+import { ColombianDepartment } from './enums/colombian-department.enum';
 
 @Injectable()
 export class AffectedZoneService {
@@ -58,6 +60,33 @@ export class AffectedZoneService {
       take: limit,
     });
     return buildPaginatedResponse(data, total, page, limit);
+  }
+
+  async getStatsByDepartment(): Promise<DepartmentStatsDto[]> {
+    const rows = await this.affectedZoneRepository
+      .createQueryBuilder('zone')
+      .select('zone.department', 'department')
+      .addSelect('COUNT(zone.id)', 'zones')
+      .addSelect(
+        'SUM(CASE WHEN zone.isActive THEN 1 ELSE 0 END)',
+        'activeZones',
+      )
+      .addSelect('SUM(zone.affectedFamilies)', 'affectedFamilies')
+      .groupBy('zone.department')
+      .orderBy('"affectedFamilies"', 'DESC')
+      .getRawMany<{
+        department: ColombianDepartment;
+        zones: string;
+        activeZones: string;
+        affectedFamilies: string;
+      }>();
+
+    return rows.map((row) => ({
+      department: row.department,
+      zones: Number(row.zones),
+      activeZones: Number(row.activeZones),
+      affectedFamilies: Number(row.affectedFamilies),
+    }));
   }
 
   async findOne(id: string): Promise<AffectedZone> {
