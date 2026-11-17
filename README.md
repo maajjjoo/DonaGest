@@ -507,7 +507,7 @@ Las pruebas e2e levantan la aplicación completa con Supertest contra PostgreSQL
 
 ### Colección de Postman
 
-La colección `docs/DonaGest.postman_collection.json` tiene 73 requests, cada uno con una prueba del código de respuesta esperado. Con la API arriba, se puede correr completa desde el *Collection Runner* de Postman.
+La colección `docs/DonaGest.postman_collection.json` tiene 93 requests, cada uno con una prueba del código de respuesta esperado. Con la API arriba, se puede correr completa desde el *Collection Runner* de Postman.
 
 ---
 
