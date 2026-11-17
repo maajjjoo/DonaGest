@@ -5,7 +5,13 @@ import {
 } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { DataSource, EntityManager } from 'typeorm';
+import {
+  Between,
+  DataSource,
+  EntityManager,
+  LessThanOrEqual,
+  MoreThanOrEqual,
+} from 'typeorm';
 import { DonorService } from '../donor/donor.service';
 import { Donor } from '../donor/entities/donor.entity';
 import { InventoryService } from '../inventory/inventory.service';
@@ -166,6 +172,53 @@ describe('DonationService', () => {
       await expect(service.cancel(DONATION_ID)).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('findAll con rango de fechas', () => {
+    const optionsOfLastCall = () =>
+      repository.findAndCount.mock.calls.at(-1)?.[0] as {
+        where: { createdAt?: unknown };
+      };
+
+    it('usa el inicio y el fin del día en hora de Colombia', async () => {
+      await service.findAll({
+        page: 1,
+        limit: 10,
+        from: '2026-11-01',
+        to: '2026-11-30',
+      });
+
+      expect(optionsOfLastCall().where.createdAt).toEqual(
+        Between(
+          new Date('2026-11-01T05:00:00.000Z'),
+          new Date('2026-12-01T04:59:59.999Z'),
+        ),
+      );
+    });
+
+    it('acepta solo la fecha inicial o solo la final', async () => {
+      await service.findAll({ page: 1, limit: 10, from: '2026-11-01' });
+      expect(optionsOfLastCall().where.createdAt).toEqual(
+        MoreThanOrEqual(new Date('2026-11-01T05:00:00.000Z')),
+      );
+
+      await service.findAll({ page: 1, limit: 10, to: '2026-11-30' });
+      expect(optionsOfLastCall().where.createdAt).toEqual(
+        LessThanOrEqual(new Date('2026-12-01T04:59:59.999Z')),
+      );
+    });
+
+    it('lanza 400 si la fecha inicial es mayor que la final', async () => {
+      await expect(
+        service.findAll({
+          page: 1,
+          limit: 10,
+          from: '2026-11-30',
+          to: '2026-11-01',
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(repository.findAndCount).not.toHaveBeenCalled();
     });
   });
 
