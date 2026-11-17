@@ -5,7 +5,13 @@ import {
 } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { DataSource, EntityManager } from 'typeorm';
+import {
+  Between,
+  DataSource,
+  EntityManager,
+  LessThanOrEqual,
+  MoreThanOrEqual,
+} from 'typeorm';
 import { DonorService } from '../donor/donor.service';
 import { Donor } from '../donor/entities/donor.entity';
 import { InventoryService } from '../inventory/inventory.service';
@@ -33,7 +39,12 @@ const buildDonation = (status = DonationStatus.RECIBIDA): Donation =>
 
 describe('DonationService', () => {
   let service: DonationService;
-  let repository: { findOne: jest.Mock; findAndCount: jest.Mock };
+  let repository: {
+    findOne: jest.Mock;
+    find: jest.Mock;
+    findAndCount: jest.Mock;
+    createQueryBuilder: jest.Mock;
+  };
   let inventoryService: { increaseStock: jest.Mock; decreaseStock: jest.Mock };
   let donorService: { findOne: jest.Mock };
   let manager: { findOne: jest.Mock; save: jest.Mock; create: jest.Mock };
@@ -41,7 +52,9 @@ describe('DonationService', () => {
   beforeEach(async () => {
     repository = {
       findOne: jest.fn().mockResolvedValue(buildDonation()),
+      find: jest.fn(),
       findAndCount: jest.fn().mockResolvedValue([[], 0]),
+      createQueryBuilder: jest.fn(),
     };
     inventoryService = {
       increaseStock: jest.fn(),
@@ -164,6 +177,70 @@ describe('DonationService', () => {
     });
   });
 
+  describe('findAll con rango de fechas', () => {
+    const optionsOfLastCall = () =>
+      repository.findAndCount.mock.calls.at(-1)?.[0] as {
+        where: { createdAt?: unknown };
+      };
+
+    it('usa el inicio y el fin del día en hora de Colombia', async () => {
+      await service.findAll({
+        page: 1,
+        limit: 10,
+        from: '2026-11-01',
+        to: '2026-11-30',
+      });
+
+      expect(optionsOfLastCall().where.createdAt).toEqual(
+        Between(
+          new Date('2026-11-01T05:00:00.000Z'),
+          new Date('2026-12-01T04:59:59.999Z'),
+        ),
+      );
+    });
+
+    it('acepta solo la fecha inicial o solo la final', async () => {
+      await service.findAll({ page: 1, limit: 10, from: '2026-11-01' });
+      expect(optionsOfLastCall().where.createdAt).toEqual(
+        MoreThanOrEqual(new Date('2026-11-01T05:00:00.000Z')),
+      );
+
+      await service.findAll({ page: 1, limit: 10, to: '2026-11-30' });
+      expect(optionsOfLastCall().where.createdAt).toEqual(
+        LessThanOrEqual(new Date('2026-12-01T04:59:59.999Z')),
+      );
+    });
+
+    it('lanza 400 si la fecha inicial es mayor que la final', async () => {
+      await expect(
+        service.findAll({
+          page: 1,
+          limit: 10,
+          from: '2026-11-30',
+          to: '2026-11-01',
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(repository.findAndCount).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('findRecent', () => {
+    it('trae las últimas 10 donaciones recibidas con donante y producto', async () => {
+      const donations = [buildDonation(), buildDonation()];
+      repository.find.mockResolvedValue(donations);
+
+      const result = await service.findRecent();
+
+      expect(repository.find).toHaveBeenCalledWith({
+        where: { status: DonationStatus.RECIBIDA },
+        relations: { donor: true, product: true },
+        order: { createdAt: 'DESC' },
+        take: 10,
+      });
+      expect(result).toBe(donations);
+    });
+  });
+
   describe('findByDonor', () => {
     it('valida que el donante exista y filtra por él', async () => {
       await service.findByDonor(DONOR_ID, { page: 1, limit: 10 });
@@ -172,6 +249,75 @@ describe('DonationService', () => {
       expect(repository.findAndCount).toHaveBeenCalledWith(
         expect.objectContaining({ where: { donor: { id: DONOR_ID } } }),
       );
+    });
+  });
+
+  describe('getDonorSummary', () => {
+    const buildQueryBuilder = (row: Record<string, unknown> | undefined) => ({
+      select: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      setParameters: jest.fn().mockReturnThis(),
+      getRawOne: jest.fn().mockResolvedValue(row),
+    });
+
+    it('devuelve las donaciones y unidades donadas del donante', async () => {
+      const lastDonationAt = new Date('2026-11-17T14:00:00Z');
+      const queryBuilder = buildQueryBuilder({
+        totalDonations: '5',
+        receivedDonations: '4',
+        cancelledDonations: '1',
+        unitsDonated: '860',
+        productsDonated: '3',
+        lastDonationAt,
+      });
+      repository.createQueryBuilder.mockReturnValue(queryBuilder);
+
+      const result = await service.getDonorSummary(DONOR_ID);
+
+      expect(queryBuilder.where).toHaveBeenCalledWith(
+        'donation.donor_id = :donorId',
+        { donorId: DONOR_ID },
+      );
+      expect(result).toEqual({
+        donorId: DONOR_ID,
+        fullName: 'Fundación Bolívar',
+        totalDonations: 5,
+        receivedDonations: 4,
+        cancelledDonations: 1,
+        unitsDonated: 860,
+        productsDonated: 3,
+        lastDonationAt,
+      });
+    });
+
+    it('devuelve ceros si el donante no tiene donaciones', async () => {
+      repository.createQueryBuilder.mockReturnValue(
+        buildQueryBuilder({
+          totalDonations: '0',
+          receivedDonations: '0',
+          cancelledDonations: '0',
+          unitsDonated: '0',
+          productsDonated: '0',
+          lastDonationAt: null,
+        }),
+      );
+
+      const result = await service.getDonorSummary(DONOR_ID);
+
+      expect(result.unitsDonated).toBe(0);
+      expect(result.lastDonationAt).toBeNull();
+    });
+
+    it('lanza 404 si el donante no existe', async () => {
+      donorService.findOne.mockRejectedValueOnce(
+        new NotFoundException('No se encontró el donante'),
+      );
+
+      await expect(service.getDonorSummary(DONOR_ID)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(repository.createQueryBuilder).not.toHaveBeenCalled();
     });
   });
 });

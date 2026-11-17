@@ -15,7 +15,8 @@
           "  return d.toISOString().slice(0, 10);",
           "};",
           "pm.collectionVariables.set('tomorrow', bogota(1));",
-          "pm.collectionVariables.set('yesterday', bogota(-1));"
+          "pm.collectionVariables.set('yesterday', bogota(-1));",
+          "pm.collectionVariables.set('nextWeek', bogota(7));"
         ]
       }
     }
@@ -39,6 +40,10 @@
     },
     {
       "key": "yesterday",
+      "value": ""
+    },
+    {
+      "key": "nextWeek",
       "value": ""
     },
     {
@@ -247,6 +252,60 @@
                   "value": "10"
                 }
               ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar zonas por nombre o municipio",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/affected-zones?search=flores",
+              "host": ["{{baseUrl}}"],
+              "path": ["affected-zones"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "flores"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Zonas y familias por departamento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/affected-zones/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["affected-zones", "stats"]
             }
           },
           "response": []
@@ -765,6 +824,54 @@
           "response": []
         },
         {
+          "name": "Resumen del donante",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/donors/{{donorId}}/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["donors", "{{donorId}}", "summary"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Resumen de un donante que no existe (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/donors/{{missingId}}/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["donors", "{{missingId}}", "summary"]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Consultar donante que no existe (404)",
           "event": [
             {
@@ -1076,6 +1183,70 @@
                 {
                   "key": "search",
                   "value": "agua"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Ordenar productos por categoría descendente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products?sort=category&order=DESC",
+              "host": ["{{baseUrl}}"],
+              "path": ["products"],
+              "query": [
+                {
+                  "key": "sort",
+                  "value": "category"
+                },
+                {
+                  "key": "order",
+                  "value": "DESC"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Ordenar por un campo inválido (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products?sort=precio",
+              "host": ["{{baseUrl}}"],
+              "path": ["products"],
+              "query": [
+                {
+                  "key": "sort",
+                  "value": "precio"
                 }
               ]
             }
@@ -1405,6 +1576,36 @@
           "response": []
         },
         {
+          "name": "Alertas de una categoría",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/alerts?category=AGUA",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "alerts"],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "AGUA"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Cambiar stock mínimo",
           "event": [
             {
@@ -1552,6 +1753,54 @@
                   "language": "json"
                 }
               }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Historial de ajustes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/{{inventoryId}}/adjustments",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "{{inventoryId}}", "adjustments"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Historial de un inventario que no existe (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/{{missingId}}/adjustments",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "{{missingId}}", "adjustments"]
             }
           },
           "response": []
@@ -1774,6 +2023,98 @@
           "response": []
         },
         {
+          "name": "Últimas 10 donaciones recibidas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/donations/recent",
+              "host": ["{{baseUrl}}"],
+              "path": ["donations", "recent"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Donaciones en un rango de fechas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/donations?from={{yesterday}}&to={{tomorrow}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["donations"],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "{{yesterday}}"
+                },
+                {
+                  "key": "to",
+                  "value": "{{tomorrow}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Rango de fechas al revés (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/donations?from={{tomorrow}}&to={{yesterday}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["donations"],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "{{tomorrow}}"
+                },
+                {
+                  "key": "to",
+                  "value": "{{yesterday}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Consultar donación por id",
           "event": [
             {
@@ -1889,6 +2230,30 @@
               "raw": "{{baseUrl}}/donors/{{donorId}}",
               "host": ["{{baseUrl}}"],
               "path": ["donors", "{{donorId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar producto con donaciones (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["products", "{{productId}}"]
             }
           },
           "response": []
@@ -2072,6 +2437,30 @@
           "response": []
         },
         {
+          "name": "Entregas vencidas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/deliveries/overdue",
+              "host": ["{{baseUrl}}"],
+              "path": ["deliveries", "overdue"]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Consultar entrega por id",
           "event": [
             {
@@ -2091,6 +2480,120 @@
               "raw": "{{baseUrl}}/deliveries/{{deliveryId}}",
               "host": ["{{baseUrl}}"],
               "path": ["deliveries", "{{deliveryId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reprogramar entrega",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/deliveries/{{deliveryId}}/reschedule",
+              "host": ["{{baseUrl}}"],
+              "path": ["deliveries", "{{deliveryId}}", "reschedule"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scheduledDate\": \"{{nextWeek}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reprogramar con fecha pasada (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/deliveries/{{deliveryId}}/reschedule",
+              "host": ["{{baseUrl}}"],
+              "path": ["deliveries", "{{deliveryId}}", "reschedule"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scheduledDate\": \"{{yesterday}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar observaciones",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/deliveries/{{deliveryId}}/notes",
+              "host": ["{{baseUrl}}"],
+              "path": ["deliveries", "{{deliveryId}}", "notes"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Se coordinó con la junta de acción comunal\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           },
           "response": []
@@ -2200,6 +2703,44 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"status\": \"ENTREGADA\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reprogramar una entrega ya entregada (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/deliveries/{{deliveryId}}/reschedule",
+              "host": ["{{baseUrl}}"],
+              "path": ["deliveries", "{{deliveryId}}", "reschedule"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scheduledDate\": \"{{nextWeek}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2455,6 +2996,54 @@
               "raw": "{{baseUrl}}/reports/zones-without-deliveries",
               "host": ["{{baseUrl}}"],
               "path": ["reports", "zones-without-deliveries"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Entregas por departamento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/deliveries-by-department",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "deliveries-by-department"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Donaciones por mes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/donations-by-month",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "donations-by-month"]
             }
           },
           "response": []

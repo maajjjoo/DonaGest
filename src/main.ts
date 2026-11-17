@@ -4,6 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { API_PREFIX, configureApp } from './app.setup';
+import { APP_VERSION } from './common/constants/app.constants';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -14,7 +15,7 @@ async function bootstrap() {
     .setDescription(
       'API para gestionar donaciones humanitarias dirigidas a comunidades colombianas afectadas por emergencias.',
     )
-    .setVersion('1.0.0')
+    .setVersion(APP_VERSION)
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document);

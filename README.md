@@ -264,7 +264,8 @@ Todas las rutas usan el prefijo `/api/v1`. Los listados son paginados con `page`
 | Método | Ruta | Descripción | Códigos |
 |---|---|---|---|
 | POST | `/affected-zones` | Registrar una zona | 201, 400 |
-| GET | `/affected-zones` | Listar con filtros `department`, `priority`, `emergencyType`, `isActive` (de CRITICA a BAJA) | 200, 400 |
+| GET | `/affected-zones` | Listar con `search` (nombre o municipio) y filtros `department`, `priority`, `emergencyType`, `isActive` (de CRITICA a BAJA) | 200, 400 |
+| GET | `/affected-zones/stats` | Zonas y familias afectadas por departamento | 200 |
 | GET | `/affected-zones/:id` | Consultar una zona | 200, 400, 404 |
 | PUT | `/affected-zones/:id` | Reemplazar todos los datos | 200, 400, 404 |
 | PATCH | `/affected-zones/:id` | Actualizar algunos datos | 200, 400, 404 |
@@ -283,13 +284,14 @@ Todas las rutas usan el prefijo `/api/v1`. Los listados son paginados con `page`
 | PATCH | `/donors/:id` | Actualizar algunos datos | 200, 400, 404, 409 |
 | DELETE | `/donors/:id` | Eliminar (si no tiene donaciones) | 204, 404, 409 |
 | GET | `/donors/:id/donations` | Historial de donaciones | 200, 400, 404 |
+| GET | `/donors/:id/summary` | Donaciones y unidades donadas por el donante | 200, 400, 404 |
 
 ### Productos
 
 | Método | Ruta | Descripción | Códigos |
 |---|---|---|---|
 | POST | `/products` | Registrar un producto (crea su inventario en 0) | 201, 400, 409 |
-| GET | `/products` | Listar con `category` y `search` | 200, 400 |
+| GET | `/products` | Listar con `category`, `search` y orden `sort` (`name` o `category`) y `order` (`ASC` o `DESC`) | 200, 400 |
 | GET | `/products/out-of-stock` | Productos con inventario en 0 | 200 |
 | GET | `/products/:id` | Consultar un producto con su inventario | 200, 400, 404 |
 | PUT | `/products/:id` | Reemplazar todos los datos | 200, 400, 404, 409 |
@@ -301,8 +303,9 @@ Todas las rutas usan el prefijo `/api/v1`. Los listados son paginados con `page`
 | Método | Ruta | Descripción | Códigos |
 |---|---|---|---|
 | GET | `/inventory` | Inventario de todos los productos | 200 |
-| GET | `/inventory/alerts` | Productos en el stock mínimo o por debajo | 200 |
+| GET | `/inventory/alerts` | Productos en el stock mínimo o por debajo, con filtro `category` | 200, 400 |
 | GET | `/inventory/product/:productId` | Inventario de un producto | 200, 400, 404 |
+| GET | `/inventory/:id/adjustments` | Historial de ajustes manuales | 200, 400, 404 |
 | PATCH | `/inventory/:id/minimum-stock` | Cambiar el stock mínimo | 200, 400, 404 |
 | PATCH | `/inventory/:id/adjust` | Ajuste manual con motivo obligatorio | 200, 400, 404, 409 |
 
@@ -311,7 +314,8 @@ Todas las rutas usan el prefijo `/api/v1`. Los listados son paginados con `page`
 | Método | Ruta | Descripción | Códigos |
 |---|---|---|---|
 | POST | `/donations` | Registrar una donación (suma al inventario) | 201, 400, 404 |
-| GET | `/donations` | Listar con `donorId`, `productId` y `status` (más recientes primero) | 200, 400 |
+| GET | `/donations` | Listar con `donorId`, `productId`, `status` y rango de fechas `from` y `to` (más recientes primero) | 200, 400 |
+| GET | `/donations/recent` | Últimas 10 donaciones recibidas | 200 |
 | GET | `/donations/summary` | Total donado por producto | 200 |
 | GET | `/donations/:id` | Consultar una donación | 200, 400, 404 |
 | PATCH | `/donations/:id/cancel` | Anular (descuenta del inventario) | 200, 400, 404, 409 |
@@ -323,8 +327,11 @@ Todas las rutas usan el prefijo `/api/v1`. Los listados son paginados con `page`
 | POST | `/deliveries` | Programar una entrega (descuenta del inventario) | 201, 400, 404, 409 |
 | GET | `/deliveries` | Listar con `affectedZoneId`, `productId`, `status`, `from` y `to` | 200, 400 |
 | GET | `/deliveries/upcoming` | Entregas programadas de hoy a 7 días | 200 |
+| GET | `/deliveries/overdue` | Entregas PROGRAMADAS con fecha vencida | 200 |
 | GET | `/deliveries/:id` | Consultar una entrega | 200, 400, 404 |
 | PATCH | `/deliveries/:id/status` | Cambiar el estado | 200, 400, 404 |
+| PATCH | `/deliveries/:id/reschedule` | Cambiar la fecha (solo PROGRAMADA y sin fechas pasadas) | 200, 400, 404 |
+| PATCH | `/deliveries/:id/notes` | Actualizar las observaciones | 200, 400, 404 |
 
 ### Reportes y salud
 
@@ -335,6 +342,8 @@ Todas las rutas usan el prefijo `/api/v1`. Los listados son paginados con `page`
 | GET | `/reports/top-donors` | Los 5 donantes con más unidades donadas | 200 |
 | GET | `/reports/inventory-by-category` | Unidades disponibles por categoría | 200 |
 | GET | `/reports/zones-without-deliveries` | Zonas activas sin entregas | 200 |
+| GET | `/reports/deliveries-by-department` | Entregas y unidades entregadas por departamento | 200 |
+| GET | `/reports/donations-by-month` | Donaciones y unidades donadas por mes | 200 |
 | GET | `/health` | Estado de la API y de la base de datos | 200, 503 |
 
 ---
@@ -365,6 +374,32 @@ Todas las rutas usan el prefijo `/api/v1`. Los listados son paginados con `page`
    - Documento según su tipo: CC y CE de 6 a 10 dígitos; NIT de 9 dígitos con dígito de verificación opcional; pasaporte de 6 a 10 letras o números.
 9. **Ajustes manuales**: requieren un motivo de al menos 5 caracteres y quedan registrados en `inventory_adjustments`.
 
+### Reglas de inventario
+
+| Situación | Qué pasa con el inventario |
+|---|---|
+| Se crea un producto | Se crea su inventario con 0 unidades y stock mínimo de 10 |
+| Se registra una donación | Suma la cantidad donada |
+| Se anula una donación | Resta la cantidad; si ya no alcanza (por ejemplo, porque se entregó), responde 409 y la donación sigue RECIBIDA |
+| Se programa una entrega | Resta la cantidad; si no alcanza, responde 409 y no se guarda la entrega |
+| Se cancela una entrega | Devuelve la cantidad |
+| Se marca una entrega como ENTREGADA | No cambia, porque ya se había descontado al programarla |
+| Ajuste manual (`PATCH /inventory/:id/adjust`) | Suma o resta con un motivo obligatorio y queda en el historial (`GET /inventory/:id/adjustments`) |
+
+- El inventario nunca queda en negativo. Mientras se cambia, la fila se bloquea para que dos pedidos al mismo tiempo no descuenten de más.
+- Un producto está **en alerta** cuando su cantidad disponible es igual o menor que su stock mínimo. Las alertas (`GET /inventory/alerts`) salen ordenadas por lo que falta para llegar al mínimo y se pueden filtrar por `category`.
+- Un producto **agotado** (`GET /products/out-of-stock`) tiene 0 unidades disponibles.
+- No se puede eliminar un producto que tenga donaciones o entregas: responde 409 con el nombre del producto. Su inventario solo se borra junto con el producto.
+
+### Reglas de donaciones
+
+- Cada donación debe tener un donante y un producto que existan (si no, 404) y una cantidad entre 1 y 10.000.
+- La donación se guarda y suma al inventario en una sola transacción: si algo falla, no se guarda nada.
+- Las donaciones **no se eliminan**. Si hubo un error, se **anulan** (`PATCH /donations/:id/cancel`). Solo se anula una donación RECIBIDA; anular una ya anulada responde 400.
+- Los reportes, el resumen por producto (`/donations/summary`), el resumen del donante (`/donors/:id/summary`) y las últimas donaciones (`/donations/recent`) solo cuentan las RECIBIDAS.
+- El filtro por fechas (`from` y `to`) usa la fecha de registro en hora de Colombia e incluye los dos días completos.
+- No se puede eliminar un donante que tenga donaciones: responde 409 con su nombre.
+
 ---
 
 ## 12. Códigos HTTP y errores
@@ -379,20 +414,24 @@ Todas las rutas usan el prefijo `/api/v1`. Los listados son paginados con `page`
 | 409 | Dato repetido, registro relacionado con otros datos o stock insuficiente |
 | 503 | La base de datos no responde (`/health`) |
 
-Los errores tienen este formato y los mensajes están en español:
+Todos los errores pasan por el filtro global `AllExceptionsFilter` y tienen el mismo formato. Los mensajes están en español:
 
 ```json
 {
   "statusCode": 409,
   "error": "Conflict",
-  "message": "Stock insuficiente: disponible 180, solicitado 500"
+  "message": "Stock insuficiente: disponible 180, solicitado 500",
+  "path": "/api/v1/deliveries",
+  "timestamp": "2026-11-17T14:00:00.000Z"
 }
 ```
 
-El filtro global `TypeOrmExceptionFilter` traduce los errores de PostgreSQL:
-
-- `23505` → 409 "El registro ya existe".
-- `23503` → 409 "No se puede completar la operación porque el registro está relacionado con otros datos".
+- En los errores de validación, `message` es una lista con todos los problemas encontrados.
+- Los errores de PostgreSQL los traduce `TypeOrmExceptionFilter`:
+  - `23505` → 409 "El registro ya existe".
+  - `23503` → 409 "No se puede completar la operación porque el registro está relacionado con otros datos".
+- Al eliminar un donante que tiene donaciones, el mensaje dice el nombre del donante.
+- Cualquier error inesperado responde 500 sin mostrar detalles internos y queda registrado en la consola.
 
 ---
 
@@ -426,7 +465,7 @@ Con esos mismos datos:
 - **Top de donantes**: el primero es la Distribuidora La Esperanza S.A.S., con 1.450 unidades en 2 donaciones.
 - **Zonas sin entregas**: Quibdó (ALTA) y luego Dosquebradas (MEDIA).
 
-`GET /health` responde `{ "status": "ok", "database": "up", "timestamp": "..." }`. Si PostgreSQL no responde, devuelve **503** con `"status": "error"` y `"database": "down"`.
+`GET /health` responde `{ "status": "ok", "database": "up", "version": "1.1.0", "uptime": 3600, "timestamp": "..." }`, donde `uptime` son los segundos que lleva la API en línea. Si PostgreSQL no responde, devuelve **503** con `"status": "error"` y `"database": "down"`.
 
 ---
 
@@ -439,18 +478,21 @@ npm run test
 npm run test:cov   # con reporte de cobertura en coverage/
 ```
 
-Son 72 pruebas en 8 archivos `*.spec.ts`, dentro de `src/`. Usan repositorios y `DataSource` simulados, así que **no necesitan la base de datos**.
+Son 117 pruebas en 11 archivos `*.spec.ts`, dentro de `src/`. Usan repositorios y `DataSource` simulados, así que **no necesitan la base de datos**.
 
 | Archivo | Qué prueba |
 |---|---|
-| `affected-zone.service.spec.ts` | Crear, filtrar, ordenar por prioridad, PUT con valores por defecto, cambiar estado y 404 |
-| `donor.service.spec.ts` | 409 por documento o correo repetido, búsqueda, 400 si el documento no coincide con el tipo |
-| `product.service.spec.ts` | Inventario en 0 al crear, 409 por nombre repetido, productos agotados |
-| `inventory.service.spec.ts` | Subir y bajar stock con bloqueo, 409 por stock insuficiente, ajuste con motivo |
-| `donation.service.spec.ts` | Registro que suma al inventario, 404, anulación, 400 si ya estaba anulada, 409 sin stock |
+| `affected-zone.service.spec.ts` | Crear, filtrar, buscar por nombre o municipio, ordenar por prioridad, estadísticas por departamento, PUT con valores por defecto, cambiar estado y 404 |
+| `donor.service.spec.ts` | 409 por documento o correo repetido, búsqueda, 400 si el documento no coincide con el tipo, 409 al eliminar un donante con donaciones |
+| `product.service.spec.ts` | Inventario en 0 al crear, 409 por nombre repetido, orden por nombre o categoría, productos agotados, 409 al eliminar con donaciones |
+| `inventory.service.spec.ts` | Subir y bajar stock con bloqueo, 409 por stock insuficiente, ajuste con motivo, historial de ajustes y alertas por categoría |
+| `donation.service.spec.ts` | Registro que suma al inventario, 404, anulación, 400 si ya estaba anulada, 409 sin stock, rango de fechas, últimas donaciones y resumen del donante |
 | `delivery-status-transitions.spec.ts` | Transiciones permitidas y no permitidas del mapa de estados |
-| `delivery.service.spec.ts` | Transiciones válidas, 400 con transición inválida, devolución del stock al cancelar, 409 sin stock, zona inactiva y fecha pasada |
-| `report.service.spec.ts` | Totales del resumen, conteos en 0 cuando no hay datos, resumen por zona, top 5 y categorías |
+| `delivery.service.spec.ts` | Transiciones, devolución del stock al cancelar, 409 sin stock, zona inactiva, fecha pasada, reprogramación, observaciones y entregas vencidas |
+| `report.service.spec.ts` | Resumen general, resumen por zona, top 5, categorías, entregas por departamento y donaciones por mes |
+| `health.service.spec.ts` | Respuesta con versión y tiempo en línea, 503 si la base no responde y que la versión coincida con `package.json` |
+| `all-exceptions.filter.spec.ts` | Formato uniforme de errores, lista de errores de validación, traducción de errores de PostgreSQL y 500 sin detalles |
+| `logging.interceptor.spec.ts` | Registro de método, ruta, código y tiempo, también cuando la petición falla |
 
 ### Pruebas e2e
 
@@ -461,14 +503,20 @@ npm run test:e2e
 
 Las pruebas e2e levantan la aplicación completa con Supertest contra PostgreSQL:
 
-- Usan una base de datos aparte, **`donagest_e2e`**. Se crea sola si no existe y se limpia al inicio de cada corrida, así que no tocan los datos de desarrollo.
-- Prueban `GET /health`.
-- Prueban el flujo **crear producto → registrar donante → donar → consultar inventario → anular → consultar inventario**.
-- Prueban los errores 400, 404 y 409.
+- Usan una base de datos aparte, **`donagest_e2e`**. Se crea sola si no existe y se limpia al inicio de cada archivo, así que no tocan los datos de desarrollo.
+- Son 31 pruebas en 5 archivos:
+
+| Archivo | Qué prueba |
+|---|---|
+| `app.e2e-spec.ts` | `GET /health` y el flujo crear producto → donar → consultar inventario → anular |
+| `zones-donors.e2e-spec.ts` | CRUD de zonas y donantes, búsqueda, estadísticas, resumen del donante y 409 al eliminar |
+| `products-inventory-donations.e2e-spec.ts` | Productos y orden, ajustes con historial, alertas por categoría, donaciones, anulación y fechas |
+| `deliveries.e2e-spec.ts` | Flujo completo de una entrega: programar, reprogramar, observaciones, despachar, entregar, cancelar y vencidas |
+| `reports.e2e-spec.ts` | Todos los reportes y `/health` con versión y tiempo en línea |
 
 ### Colección de Postman
 
-La colección `docs/DonaGest.postman_collection.json` tiene 73 requests, cada uno con una prueba del código de respuesta esperado. Con la API arriba, se puede correr completa desde el *Collection Runner* de Postman.
+La colección `docs/DonaGest.postman_collection.json` tiene 93 requests, cada uno con una prueba del código de respuesta esperado. Con la API arriba, se puede correr completa desde el *Collection Runner* de Postman.
 
 ---
 

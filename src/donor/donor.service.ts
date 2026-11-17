@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, ILike, Not, Repository } from 'typeorm';
+import { isForeignKeyViolation } from '../common/helpers/database-error.helper';
 import {
   buildPaginatedResponse,
   getSkip,
@@ -81,7 +82,16 @@ export class DonorService {
 
   async remove(id: string): Promise<void> {
     const donor = await this.findOne(id);
-    await this.donorRepository.remove(donor);
+    try {
+      await this.donorRepository.remove(donor);
+    } catch (error) {
+      if (isForeignKeyViolation(error)) {
+        throw new ConflictException(
+          `No se puede eliminar a ${donor.fullName} porque tiene donaciones registradas. Las donaciones se guardan para no perder el historial.`,
+        );
+      }
+      throw error;
+    }
   }
 
   private async ensureUnique(

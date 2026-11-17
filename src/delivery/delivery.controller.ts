@@ -21,6 +21,8 @@ import { UuidParamPipe } from '../common/pipes/uuid-param.pipe';
 import { DeliveryService } from './delivery.service';
 import { CreateDeliveryDto } from './dto/create-delivery.dto';
 import { FilterDeliveryDto } from './dto/filter-delivery.dto';
+import { RescheduleDeliveryDto } from './dto/reschedule-delivery.dto';
+import { UpdateDeliveryNotesDto } from './dto/update-delivery-notes.dto';
 import { UpdateDeliveryStatusDto } from './dto/update-delivery-status.dto';
 import { Delivery } from './entities/delivery.entity';
 
@@ -56,6 +58,17 @@ export class DeliveryController {
   @ApiPaginatedResponse(Delivery)
   findAll(@Query() query: FilterDeliveryDto) {
     return this.deliveryService.findAll(query);
+  }
+
+  @Get('overdue')
+  @ApiOperation({
+    summary: 'Entregas programadas con fecha vencida',
+    description:
+      'Entregas que siguen PROGRAMADAS pero cuya fecha ya pasó (hora de Colombia). Sirve para reprogramarlas o cancelarlas.',
+  })
+  @ApiOkResponse({ type: Delivery, isArray: true })
+  findOverdue() {
+    return this.deliveryService.findOverdue();
   }
 
   @Get('upcoming')
@@ -95,5 +108,40 @@ export class DeliveryController {
     @Body() dto: UpdateDeliveryStatusDto,
   ) {
     return this.deliveryService.updateStatus(id, dto);
+  }
+
+  @Patch(':id/reschedule')
+  @ApiOperation({
+    summary: 'Cambiar la fecha de una entrega',
+    description:
+      'Solo se pueden reprogramar entregas PROGRAMADAS y la nueva fecha no puede estar en el pasado (hora de Colombia).',
+  })
+  @ApiOkResponse({ type: Delivery })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Fecha pasada, fecha inválida o entrega que no está PROGRAMADA',
+  })
+  @ApiResponse({ status: 404, description: 'Entrega no encontrada' })
+  reschedule(
+    @Param('id', UuidParamPipe) id: string,
+    @Body() dto: RescheduleDeliveryDto,
+  ) {
+    return this.deliveryService.reschedule(id, dto);
+  }
+
+  @Patch(':id/notes')
+  @ApiOperation({
+    summary: 'Actualizar las observaciones de una entrega',
+    description: 'Se puede hacer en cualquier estado. Enviar "" las borra.',
+  })
+  @ApiOkResponse({ type: Delivery })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 404, description: 'Entrega no encontrada' })
+  updateNotes(
+    @Param('id', UuidParamPipe) id: string,
+    @Body() dto: UpdateDeliveryNotesDto,
+  ) {
+    return this.deliveryService.updateNotes(id, dto);
   }
 }

@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { QueryFailedError, Repository } from 'typeorm';
 import { DonorService } from './donor.service';
 import { CreateDonorDto } from './dto/create-donor.dto';
 import { Donor } from './entities/donor.entity';
@@ -166,6 +166,38 @@ describe('DonorService', () => {
       await service.remove(donor.id);
 
       expect(repository.remove).toHaveBeenCalledWith(donor);
+    });
+
+    it('lanza 409 con mensaje claro si el donante tiene donaciones', async () => {
+      const donor = buildDonor();
+      repository.findOne?.mockResolvedValue(donor);
+      repository.remove?.mockRejectedValue(
+        new QueryFailedError(
+          'DELETE FROM donors',
+          [],
+          Object.assign(new Error('violates foreign key constraint'), {
+            code: '23503',
+          }),
+        ),
+      );
+
+      await expect(service.remove(donor.id)).rejects.toThrow(
+        new ConflictException(
+          'No se puede eliminar a María Fernanda Ospina porque tiene donaciones registradas. Las donaciones se guardan para no perder el historial.',
+        ),
+      );
+    });
+
+    it('deja pasar otros errores de la base de datos', async () => {
+      repository.findOne?.mockResolvedValue(buildDonor());
+      const otherError = new QueryFailedError(
+        'DELETE FROM donors',
+        [],
+        Object.assign(new Error('connection lost'), { code: '08006' }),
+      );
+      repository.remove?.mockRejectedValue(otherError);
+
+      await expect(service.remove('id')).rejects.toBe(otherError);
     });
   });
 });

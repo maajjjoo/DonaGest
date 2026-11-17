@@ -43,6 +43,7 @@ describe('AffectedZoneService', () => {
         Object.assign(zone, changes),
       ),
       remove: jest.fn(),
+      createQueryBuilder: jest.fn(),
     };
 
     const moduleRef = await Test.createTestingModule({
@@ -93,6 +94,40 @@ describe('AffectedZoneService', () => {
       data: zones,
       meta: { total: 11, page: 2, limit: 5, totalPages: 3 },
     });
+  });
+
+  it('busca por nombre o municipio sin perder los demás filtros', async () => {
+    repository.findAndCount?.mockResolvedValue([[buildZone()], 1]);
+
+    await service.findAll({
+      page: 1,
+      limit: 10,
+      search: 'san marcos',
+      department: ColombianDepartment.SUCRE,
+    });
+
+    const findAndCount = repository.findAndCount as jest.Mock;
+    const [[options]] = findAndCount.mock.calls as [
+      [{ where: Record<string, unknown>[] }],
+    ];
+    expect(options.where).toHaveLength(2);
+    expect(options.where[0]).toMatchObject({
+      department: ColombianDepartment.SUCRE,
+    });
+    expect(options.where[0]).toHaveProperty('name');
+    expect(options.where[1]).toHaveProperty('municipality');
+  });
+
+  it('escapa los comodines de la búsqueda', async () => {
+    repository.findAndCount?.mockResolvedValue([[], 0]);
+
+    await service.findAll({ page: 1, limit: 10, search: '100%_seguro' });
+
+    const findAndCount = repository.findAndCount as jest.Mock;
+    const [[options]] = findAndCount.mock.calls as [
+      [{ where: { name: { value: string } }[] }],
+    ];
+    expect(options.where[0].name.value).toBe('%100\\%\\_seguro%');
   });
 
   it('devuelve la zona cuando existe', async () => {
@@ -163,5 +198,63 @@ describe('AffectedZoneService', () => {
       NotFoundException,
     );
     expect(repository.remove).not.toHaveBeenCalled();
+  });
+
+  it('agrupa zonas y familias por departamento y convierte a número', async () => {
+    const queryBuilder = {
+      select: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      getRawMany: jest.fn().mockResolvedValue([
+        {
+          department: ColombianDepartment.SUCRE,
+          zones: '2',
+          activeZones: '1',
+          affectedFamilies: '1570',
+        },
+        {
+          department: ColombianDepartment.CHOCO,
+          zones: '1',
+          activeZones: '1',
+          affectedFamilies: '430',
+        },
+      ]),
+    };
+    repository.createQueryBuilder?.mockReturnValue(queryBuilder);
+
+    const result = await service.getStatsByDepartment();
+
+    expect(queryBuilder.groupBy).toHaveBeenCalledWith('zone.department');
+    expect(queryBuilder.orderBy).toHaveBeenCalledWith(
+      '"affectedFamilies"',
+      'DESC',
+    );
+    expect(result).toEqual([
+      {
+        department: ColombianDepartment.SUCRE,
+        zones: 2,
+        activeZones: 1,
+        affectedFamilies: 1570,
+      },
+      {
+        department: ColombianDepartment.CHOCO,
+        zones: 1,
+        activeZones: 1,
+        affectedFamilies: 430,
+      },
+    ]);
+  });
+
+  it('devuelve una lista vacía si no hay zonas', async () => {
+    repository.createQueryBuilder?.mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      getRawMany: jest.fn().mockResolvedValue([]),
+    });
+
+    await expect(service.getStatsByDepartment()).resolves.toEqual([]);
   });
 });

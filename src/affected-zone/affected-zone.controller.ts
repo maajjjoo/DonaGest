@@ -23,6 +23,7 @@ import { ApiPaginatedResponse } from '../common/decorators/api-paginated-respons
 import { UuidParamPipe } from '../common/pipes/uuid-param.pipe';
 import { AffectedZoneService } from './affected-zone.service';
 import { CreateAffectedZoneDto } from './dto/create-affected-zone.dto';
+import { DepartmentStatsDto } from './dto/department-stats.dto';
 import { FilterAffectedZoneDto } from './dto/filter-affected-zone.dto';
 import { UpdateAffectedZoneDto } from './dto/update-affected-zone.dto';
 import { UpdateZoneStatusDto } from './dto/update-zone-status.dto';
@@ -50,6 +51,17 @@ export class AffectedZoneController {
   @ApiPaginatedResponse(AffectedZone)
   findAll(@Query() query: FilterAffectedZoneDto) {
     return this.affectedZoneService.findAll(query);
+  }
+
+  @Get('stats')
+  @ApiOperation({
+    summary: 'Zonas y familias afectadas por departamento',
+    description:
+      'Agrupa todas las zonas por departamento, de mayor a menor número de familias afectadas.',
+  })
+  @ApiOkResponse({ type: DepartmentStatsDto, isArray: true })
+  getStats() {
+    return this.affectedZoneService.getStatsByDepartment();
   }
 
   @Get(':id')

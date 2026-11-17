@@ -13,3 +13,9 @@ export const addDays = (isoDate: string, days: number): string => {
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
 };
+
+export const startOfDayInColombia = (isoDate: string): Date =>
+  new Date(`${isoDate}T00:00:00.000-05:00`);
+
+export const endOfDayInColombia = (isoDate: string): Date =>
+  new Date(`${isoDate}T23:59:59.999-05:00`);

@@ -1,1 +1,3 @@
 export const MAX_DONATION_QUANTITY = 10000;
+
+export const RECENT_DONATIONS_LIMIT = 10;

@@ -1,11 +1,12 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { QueryFailedError, Repository } from 'typeorm';
 import { Inventory } from '../inventory/entities/inventory.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { Product } from './entities/product.entity';
 import { ProductCategory } from './enums/product-category.enum';
+import { ProductSortField, SortOrder } from './enums/product-sort.enum';
 import { ProductUnit } from './enums/product-unit.enum';
 import { ProductService } from './product.service';
 
@@ -89,12 +90,37 @@ describe('ProductService', () => {
         limit: 10,
         category: ProductCategory.AGUA,
         search: 'agua',
+        sort: ProductSortField.NAME,
+        order: SortOrder.ASC,
       });
 
       const findAndCount = repository.findAndCount as jest.Mock;
       const [[options]] = findAndCount.mock.calls as [[{ where: object[] }]];
       expect(options.where).toHaveLength(2);
       expect(result.meta.total).toBe(1);
+    });
+
+    it.each([
+      [ProductSortField.NAME, SortOrder.ASC, { name: SortOrder.ASC }],
+      [ProductSortField.NAME, SortOrder.DESC, { name: SortOrder.DESC }],
+      [
+        ProductSortField.CATEGORY,
+        SortOrder.ASC,
+        { category: SortOrder.ASC, name: 'ASC' },
+      ],
+      [
+        ProductSortField.CATEGORY,
+        SortOrder.DESC,
+        { category: SortOrder.DESC, name: 'ASC' },
+      ],
+    ])('ordena por %s en orden %s', async (sort, order, expected) => {
+      repository.findAndCount?.mockResolvedValue([[], 0]);
+
+      await service.findAll({ page: 1, limit: 10, sort, order });
+
+      expect(repository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({ order: expected }),
+      );
     });
   });
 
@@ -174,6 +200,27 @@ describe('ProductService', () => {
       await service.remove(product.id);
 
       expect(repository.remove).toHaveBeenCalledWith(product);
+    });
+
+    it('lanza 409 con mensaje claro si el producto tiene donaciones o entregas', async () => {
+      repository.findOne?.mockResolvedValue(buildProduct());
+      repository.remove?.mockRejectedValue(
+        new QueryFailedError(
+          'DELETE FROM products',
+          [],
+          Object.assign(new Error('violates foreign key constraint'), {
+            code: '23503',
+          }),
+        ),
+      );
+
+      await expect(
+        service.remove('7995f153-f381-45e8-8b23-fedf0d0712fe'),
+      ).rejects.toThrow(
+        new ConflictException(
+          'No se puede eliminar "Agua potable en bolsa 6 L" porque tiene donaciones o entregas registradas',
+        ),
+      );
     });
   });
 });
