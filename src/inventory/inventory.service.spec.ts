@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 import { Product } from '../product/entities/product.entity';
+import { ProductCategory } from '../product/enums/product-category.enum';
 import { InventoryAdjustment } from './entities/inventory-adjustment.entity';
 import { Inventory } from './entities/inventory.entity';
 import { InventoryService } from './inventory.service';
@@ -43,7 +44,11 @@ describe('InventoryService', () => {
   let adjustmentRepository: { findAndCount: jest.Mock };
 
   beforeEach(async () => {
-    repository = { findOne: jest.fn(), save: jest.fn() };
+    repository = {
+      findOne: jest.fn(),
+      save: jest.fn(),
+      createQueryBuilder: jest.fn(),
+    };
     dataSource = { transaction: jest.fn() };
     adjustmentRepository = { findAndCount: jest.fn() };
 
@@ -208,6 +213,49 @@ describe('InventoryService', () => {
         service.findAdjustments(INVENTORY_ID, { page: 1, limit: 10 }),
       ).rejects.toThrow(NotFoundException);
       expect(adjustmentRepository.findAndCount).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('findAlerts', () => {
+    const buildAlertsQueryBuilder = () => {
+      const builder = {
+        innerJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        addOrderBy: jest.fn().mockReturnThis(),
+        offset: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue([[buildInventory(3)], 1]),
+      };
+      repository.createQueryBuilder?.mockReturnValue(builder);
+      return builder;
+    };
+
+    it('filtra las alertas por categoría', async () => {
+      const builder = buildAlertsQueryBuilder();
+
+      const result = await service.findAlerts({
+        page: 1,
+        limit: 10,
+        category: ProductCategory.ROPA,
+      });
+
+      expect(builder.andWhere).toHaveBeenCalledWith(
+        'product.category = :category',
+        { category: ProductCategory.ROPA },
+      );
+      expect(result.meta.total).toBe(1);
+    });
+
+    it('sin categoría no agrega el filtro', async () => {
+      const builder = buildAlertsQueryBuilder();
+
+      await service.findAlerts({ page: 2, limit: 5 });
+
+      expect(builder.andWhere).not.toHaveBeenCalled();
+      expect(builder.offset).toHaveBeenCalledWith(5);
+      expect(builder.limit).toHaveBeenCalledWith(5);
     });
   });
 });
