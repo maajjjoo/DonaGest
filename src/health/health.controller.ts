@@ -17,7 +17,7 @@ export class HealthController {
   @ApiOperation({
     summary: 'Estado de la API y de la base de datos',
     description:
-      'Hace un SELECT 1 a PostgreSQL. Si la base de datos no responde devuelve 503.',
+      'Hace un SELECT 1 a PostgreSQL y muestra la versión de la API y los segundos que lleva en línea. Si la base de datos no responde devuelve 503.',
   })
   @ApiOkResponse({ type: HealthResponseDto })
   @ApiServiceUnavailableResponse({

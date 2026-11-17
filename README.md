@@ -327,8 +327,11 @@ Todas las rutas usan el prefijo `/api/v1`. Los listados son paginados con `page`
 | POST | `/deliveries` | Programar una entrega (descuenta del inventario) | 201, 400, 404, 409 |
 | GET | `/deliveries` | Listar con `affectedZoneId`, `productId`, `status`, `from` y `to` | 200, 400 |
 | GET | `/deliveries/upcoming` | Entregas programadas de hoy a 7 días | 200 |
+| GET | `/deliveries/overdue` | Entregas PROGRAMADAS con fecha vencida | 200 |
 | GET | `/deliveries/:id` | Consultar una entrega | 200, 400, 404 |
 | PATCH | `/deliveries/:id/status` | Cambiar el estado | 200, 400, 404 |
+| PATCH | `/deliveries/:id/reschedule` | Cambiar la fecha (solo PROGRAMADA y sin fechas pasadas) | 200, 400, 404 |
+| PATCH | `/deliveries/:id/notes` | Actualizar las observaciones | 200, 400, 404 |
 
 ### Reportes y salud
 
@@ -339,6 +342,8 @@ Todas las rutas usan el prefijo `/api/v1`. Los listados son paginados con `page`
 | GET | `/reports/top-donors` | Los 5 donantes con más unidades donadas | 200 |
 | GET | `/reports/inventory-by-category` | Unidades disponibles por categoría | 200 |
 | GET | `/reports/zones-without-deliveries` | Zonas activas sin entregas | 200 |
+| GET | `/reports/deliveries-by-department` | Entregas y unidades entregadas por departamento | 200 |
+| GET | `/reports/donations-by-month` | Donaciones y unidades donadas por mes | 200 |
 | GET | `/health` | Estado de la API y de la base de datos | 200, 503 |
 
 ---
@@ -460,7 +465,7 @@ Con esos mismos datos:
 - **Top de donantes**: el primero es la Distribuidora La Esperanza S.A.S., con 1.450 unidades en 2 donaciones.
 - **Zonas sin entregas**: Quibdó (ALTA) y luego Dosquebradas (MEDIA).
 
-`GET /health` responde `{ "status": "ok", "database": "up", "timestamp": "..." }`. Si PostgreSQL no responde, devuelve **503** con `"status": "error"` y `"database": "down"`.
+`GET /health` responde `{ "status": "ok", "database": "up", "version": "1.1.0", "uptime": 3600, "timestamp": "..." }`, donde `uptime` son los segundos que lleva la API en línea. Si PostgreSQL no responde, devuelve **503** con `"status": "error"` y `"database": "down"`.
 
 ---
 
@@ -473,18 +478,21 @@ npm run test
 npm run test:cov   # con reporte de cobertura en coverage/
 ```
 
-Son 72 pruebas en 8 archivos `*.spec.ts`, dentro de `src/`. Usan repositorios y `DataSource` simulados, así que **no necesitan la base de datos**.
+Son 117 pruebas en 11 archivos `*.spec.ts`, dentro de `src/`. Usan repositorios y `DataSource` simulados, así que **no necesitan la base de datos**.
 
 | Archivo | Qué prueba |
 |---|---|
-| `affected-zone.service.spec.ts` | Crear, filtrar, ordenar por prioridad, PUT con valores por defecto, cambiar estado y 404 |
-| `donor.service.spec.ts` | 409 por documento o correo repetido, búsqueda, 400 si el documento no coincide con el tipo |
-| `product.service.spec.ts` | Inventario en 0 al crear, 409 por nombre repetido, productos agotados |
-| `inventory.service.spec.ts` | Subir y bajar stock con bloqueo, 409 por stock insuficiente, ajuste con motivo |
-| `donation.service.spec.ts` | Registro que suma al inventario, 404, anulación, 400 si ya estaba anulada, 409 sin stock |
+| `affected-zone.service.spec.ts` | Crear, filtrar, buscar por nombre o municipio, ordenar por prioridad, estadísticas por departamento, PUT con valores por defecto, cambiar estado y 404 |
+| `donor.service.spec.ts` | 409 por documento o correo repetido, búsqueda, 400 si el documento no coincide con el tipo, 409 al eliminar un donante con donaciones |
+| `product.service.spec.ts` | Inventario en 0 al crear, 409 por nombre repetido, orden por nombre o categoría, productos agotados, 409 al eliminar con donaciones |
+| `inventory.service.spec.ts` | Subir y bajar stock con bloqueo, 409 por stock insuficiente, ajuste con motivo, historial de ajustes y alertas por categoría |
+| `donation.service.spec.ts` | Registro que suma al inventario, 404, anulación, 400 si ya estaba anulada, 409 sin stock, rango de fechas, últimas donaciones y resumen del donante |
 | `delivery-status-transitions.spec.ts` | Transiciones permitidas y no permitidas del mapa de estados |
-| `delivery.service.spec.ts` | Transiciones válidas, 400 con transición inválida, devolución del stock al cancelar, 409 sin stock, zona inactiva y fecha pasada |
-| `report.service.spec.ts` | Totales del resumen, conteos en 0 cuando no hay datos, resumen por zona, top 5 y categorías |
+| `delivery.service.spec.ts` | Transiciones, devolución del stock al cancelar, 409 sin stock, zona inactiva, fecha pasada, reprogramación, observaciones y entregas vencidas |
+| `report.service.spec.ts` | Resumen general, resumen por zona, top 5, categorías, entregas por departamento y donaciones por mes |
+| `health.service.spec.ts` | Respuesta con versión y tiempo en línea, 503 si la base no responde y que la versión coincida con `package.json` |
+| `all-exceptions.filter.spec.ts` | Formato uniforme de errores, lista de errores de validación, traducción de errores de PostgreSQL y 500 sin detalles |
+| `logging.interceptor.spec.ts` | Registro de método, ruta, código y tiempo, también cuando la petición falla |
 
 ### Pruebas e2e
 
@@ -495,14 +503,20 @@ npm run test:e2e
 
 Las pruebas e2e levantan la aplicación completa con Supertest contra PostgreSQL:
 
-- Usan una base de datos aparte, **`donagest_e2e`**. Se crea sola si no existe y se limpia al inicio de cada corrida, así que no tocan los datos de desarrollo.
-- Prueban `GET /health`.
-- Prueban el flujo **crear producto → registrar donante → donar → consultar inventario → anular → consultar inventario**.
-- Prueban los errores 400, 404 y 409.
+- Usan una base de datos aparte, **`donagest_e2e`**. Se crea sola si no existe y se limpia al inicio de cada archivo, así que no tocan los datos de desarrollo.
+- Son 31 pruebas en 5 archivos:
+
+| Archivo | Qué prueba |
+|---|---|
+| `app.e2e-spec.ts` | `GET /health` y el flujo crear producto → donar → consultar inventario → anular |
+| `zones-donors.e2e-spec.ts` | CRUD de zonas y donantes, búsqueda, estadísticas, resumen del donante y 409 al eliminar |
+| `products-inventory-donations.e2e-spec.ts` | Productos y orden, ajustes con historial, alertas por categoría, donaciones, anulación y fechas |
+| `deliveries.e2e-spec.ts` | Flujo completo de una entrega: programar, reprogramar, observaciones, despachar, entregar, cancelar y vencidas |
+| `reports.e2e-spec.ts` | Todos los reportes y `/health` con versión y tiempo en línea |
 
 ### Colección de Postman
 
-La colección `docs/DonaGest.postman_collection.json` tiene 73 requests, cada uno con una prueba del código de respuesta esperado. Con la API arriba, se puede correr completa desde el *Collection Runner* de Postman.
+La colección `docs/DonaGest.postman_collection.json` tiene 93 requests, cada uno con una prueba del código de respuesta esperado. Con la API arriba, se puede correr completa desde el *Collection Runner* de Postman.
 
 ---
 
