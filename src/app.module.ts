@@ -6,7 +6,7 @@ import { AffectedZoneModule } from './affected-zone/affected-zone.module';
 import { DonorModule } from './donor/donor.module';
 import { ProductModule } from './product/product.module';
 import { InventoryModule } from './inventory/inventory.module';
-import { DonationController } from './donation/donation.controller';
+import { DonationModule } from './donation/donation.module';
 import { DeliveryController } from './delivery/delivery.controller';
 
 @Module({
@@ -20,7 +20,8 @@ import { DeliveryController } from './delivery/delivery.controller';
     DonorModule,
     ProductModule,
     InventoryModule,
+    DonationModule,
   ],
-  controllers: [DonationController, DeliveryController],
+  controllers: [DeliveryController],
 })
 export class AppModule {}
