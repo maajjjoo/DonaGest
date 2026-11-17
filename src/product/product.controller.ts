@@ -1,91 +1,62 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Post,
-  Put,
+  Query,
 } from '@nestjs/common';
+import {
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { UuidParamPipe } from '../common/pipes/uuid-param.pipe';
+import { CreateProductDto } from './dto/create-product.dto';
+import { Product } from './entities/product.entity';
+import { ProductService } from './product.service';
 
-interface Product {
-  id: number;
-  name: string;
-  description: string;
-  category: string;
-}
-
+@ApiTags('Productos')
 @Controller('products')
 export class ProductController {
-  private products: Product[] = [];
+  constructor(private readonly productService: ProductService) {}
+
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Registrar un producto',
+    description:
+      'Al crear el producto también se crea su inventario con cantidad 0.',
+  })
+  @ApiCreatedResponse({ description: 'Producto registrado', type: Product })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({
+    status: 409,
+    description: 'Ya existe un producto con ese nombre',
+  })
+  create(@Body() dto: CreateProductDto) {
+    return this.productService.create(dto);
+  }
 
   @Get()
-  getAllProducts() {
-    return this.products;
+  @ApiOperation({ summary: 'Listar productos con su inventario' })
+  @ApiPaginatedResponse(Product)
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.productService.findAll(query);
   }
 
   @Get(':id')
-  getProductById(@Param('id') id: number) {
-    const product = this.products.find((product) => product.id === Number(id));
-
-    if (product) {
-      return {
-        msg: `Producto con id ${id} encontrado`,
-        data: product,
-      };
-    } else {
-      return {
-        msg: `Producto con id ${id} no encontrado`,
-      };
-    }
-  }
-
-  @Post()
-  createProduct(@Body() product: Product) {
-    this.products.push(product);
-    return {
-      msg: 'Producto creado exitosamente',
-      data: product,
-    };
-  }
-
-  @Put(':id')
-  updateProduct(@Param('id') id: number, @Body() updatedProduct: Product) {
-    const productIndex = this.products.findIndex(
-      (product) => product.id === Number(id),
-    );
-
-    if (productIndex === -1) {
-      return {
-        msg: `Producto con id ${id} no encontrado`,
-      };
-    }
-
-    this.products[productIndex] = {
-      ...this.products[productIndex],
-      ...updatedProduct,
-    };
-    return {
-      msg: `Producto con id ${id} actualizado exitosamente`,
-      data: this.products[productIndex],
-    };
-  }
-
-  @Delete(':id')
-  deleteProduct(@Param('id') id: number) {
-    const productIndex = this.products.findIndex(
-      (product) => product.id === Number(id),
-    );
-
-    if (productIndex === -1) {
-      return {
-        msg: `Producto con id ${id} no encontrado`,
-      };
-    }
-
-    this.products.splice(productIndex, 1);
-    return {
-      msg: `Producto con id ${id} eliminado exitosamente`,
-    };
+  @ApiOperation({ summary: 'Consultar un producto con su inventario' })
+  @ApiOkResponse({ type: Product })
+  @ApiResponse({ status: 400, description: 'El id no es un UUID válido' })
+  @ApiResponse({ status: 404, description: 'Producto no encontrado' })
+  findOne(@Param('id', UuidParamPipe) id: string) {
+    return this.productService.findOne(id);
   }
 }
