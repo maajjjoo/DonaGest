@@ -5,8 +5,8 @@ import { databaseConfig } from './config/database.config';
 import { AffectedZoneModule } from './affected-zone/affected-zone.module';
 import { DonorModule } from './donor/donor.module';
 import { ProductModule } from './product/product.module';
+import { InventoryModule } from './inventory/inventory.module';
 import { DonationController } from './donation/donation.controller';
-import { InventoryController } from './inventory/inventory.controller';
 import { DeliveryController } from './delivery/delivery.controller';
 
 @Module({
@@ -19,7 +19,8 @@ import { DeliveryController } from './delivery/delivery.controller';
     AffectedZoneModule,
     DonorModule,
     ProductModule,
+    InventoryModule,
   ],
-  controllers: [DonationController, InventoryController, DeliveryController],
+  controllers: [DonationController, DeliveryController],
 })
 export class AppModule {}
