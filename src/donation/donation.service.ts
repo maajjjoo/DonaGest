@@ -4,13 +4,24 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, FindOptionsWhere, Repository } from 'typeorm';
+import {
+  Between,
+  DataSource,
+  FindOptionsWhere,
+  LessThanOrEqual,
+  MoreThanOrEqual,
+  Repository,
+} from 'typeorm';
 import {
   buildPaginatedResponse,
   getSkip,
 } from '../common/helpers/paginate.helper';
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import {
+  endOfDayInColombia,
+  startOfDayInColombia,
+} from '../common/helpers/date.helper';
 import { DonorService } from '../donor/donor.service';
 import { Donor } from '../donor/entities/donor.entity';
 import { InventoryService } from '../inventory/inventory.service';
@@ -102,8 +113,24 @@ export class DonationService {
   async findAll(
     query: FilterDonationDto,
   ): Promise<PaginatedResponse<Donation>> {
-    const { page, limit, donorId, productId, status } = query;
+    const { page, limit, donorId, productId, status, from, to } = query;
+    if (from && to && from > to) {
+      throw new BadRequestException(
+        'La fecha inicial (from) no puede ser mayor que la final (to)',
+      );
+    }
+
     const where: FindOptionsWhere<Donation> = {};
+    if (from && to) {
+      where.createdAt = Between(
+        startOfDayInColombia(from),
+        endOfDayInColombia(to),
+      );
+    } else if (from) {
+      where.createdAt = MoreThanOrEqual(startOfDayInColombia(from));
+    } else if (to) {
+      where.createdAt = LessThanOrEqual(endOfDayInColombia(to));
+    }
     if (donorId) where.donor = { id: donorId };
     if (productId) where.product = { id: productId };
     if (status) where.status = status;

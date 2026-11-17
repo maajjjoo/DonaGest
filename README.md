@@ -314,7 +314,7 @@ Todas las rutas usan el prefijo `/api/v1`. Los listados son paginados con `page`
 | Método | Ruta | Descripción | Códigos |
 |---|---|---|---|
 | POST | `/donations` | Registrar una donación (suma al inventario) | 201, 400, 404 |
-| GET | `/donations` | Listar con `donorId`, `productId` y `status` (más recientes primero) | 200, 400 |
+| GET | `/donations` | Listar con `donorId`, `productId`, `status` y rango de fechas `from` y `to` (más recientes primero) | 200, 400 |
 | GET | `/donations/summary` | Total donado por producto | 200 |
 | GET | `/donations/:id` | Consultar una donación | 200, 400, 404 |
 | PATCH | `/donations/:id/cancel` | Anular (descuenta del inventario) | 200, 400, 404, 409 |

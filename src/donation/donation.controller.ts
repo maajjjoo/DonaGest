@@ -49,9 +49,10 @@ export class DonationController {
   @Get()
   @ApiOperation({
     summary:
-      'Listar donaciones con filtros por donante, producto y estado, las más recientes primero',
+      'Listar donaciones con filtros por donante, producto, estado y rango de fechas (hora de Colombia), las más recientes primero',
   })
   @ApiPaginatedResponse(Donation)
+  @ApiResponse({ status: 400, description: 'Filtros inválidos' })
   findAll(@Query() query: FilterDonationDto) {
     return this.donationService.findAll(query);
   }
