@@ -20,6 +20,7 @@ import {
   ZonesByPriorityDto,
 } from './dto/summary-report.dto';
 import { DeliveriesByDepartmentDto } from './dto/deliveries-by-department.dto';
+import { DonationsByMonthDto } from './dto/donations-by-month.dto';
 import { InventoryByCategoryDto } from './dto/inventory-by-category.dto';
 import { TopDonorDto } from './dto/top-donor.dto';
 import { ZoneReportDto } from './dto/zone-report.dto';
@@ -301,6 +302,48 @@ export class ReportService {
       completedDeliveries: Number(row.completedDeliveries),
       cancelledDeliveries: Number(row.cancelledDeliveries),
       unitsDelivered: Number(row.unitsDelivered),
+    }));
+  }
+
+  async getDonationsByMonth(): Promise<DonationsByMonthDto[]> {
+    const month =
+      "TO_CHAR(donation.created_at AT TIME ZONE 'America/Bogota', 'YYYY-MM')";
+    const rows = await this.donationRepository
+      .createQueryBuilder('donation')
+      .select(month, 'month')
+      .addSelect(
+        'COUNT(donation.id) FILTER (WHERE donation.status = :received)',
+        'receivedDonations',
+      )
+      .addSelect(
+        'COUNT(donation.id) FILTER (WHERE donation.status = :cancelled)',
+        'cancelledDonations',
+      )
+      .addSelect(
+        'COALESCE(SUM(donation.quantity) FILTER (WHERE donation.status = :received), 0)',
+        'unitsDonated',
+      )
+      .addSelect('COUNT(DISTINCT donation.donor_id)', 'donors')
+      .setParameters({
+        received: DonationStatus.RECIBIDA,
+        cancelled: DonationStatus.ANULADA,
+      })
+      .groupBy(month)
+      .orderBy('month', 'ASC')
+      .getRawMany<{
+        month: string;
+        receivedDonations: string;
+        cancelledDonations: string;
+        unitsDonated: string;
+        donors: string;
+      }>();
+
+    return rows.map((row) => ({
+      month: row.month,
+      receivedDonations: Number(row.receivedDonations),
+      cancelledDonations: Number(row.cancelledDonations),
+      unitsDonated: Number(row.unitsDonated),
+      donors: Number(row.donors),
     }));
   }
 }

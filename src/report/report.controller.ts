@@ -8,6 +8,7 @@ import {
 import { UuidParamPipe } from '../common/pipes/uuid-param.pipe';
 import { SummaryReportDto } from './dto/summary-report.dto';
 import { DeliveriesByDepartmentDto } from './dto/deliveries-by-department.dto';
+import { DonationsByMonthDto } from './dto/donations-by-month.dto';
 import { InventoryByCategoryDto } from './dto/inventory-by-category.dto';
 import { TopDonorDto } from './dto/top-donor.dto';
 import { ZoneReportDto } from './dto/zone-report.dto';
@@ -71,6 +72,17 @@ export class ReportController {
   @ApiOkResponse({ type: DeliveriesByDepartmentDto, isArray: true })
   getDeliveriesByDepartment() {
     return this.reportService.getDeliveriesByDepartment();
+  }
+
+  @Get('donations-by-month')
+  @ApiOperation({
+    summary: 'Donaciones por mes',
+    description:
+      'Donaciones recibidas y anuladas, unidades donadas y donantes distintos de cada mes (hora de Colombia), del mes más antiguo al más reciente.',
+  })
+  @ApiOkResponse({ type: DonationsByMonthDto, isArray: true })
+  getDonationsByMonth() {
+    return this.reportService.getDonationsByMonth();
   }
 
   @Get('zones/:id')

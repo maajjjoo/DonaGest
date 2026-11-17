@@ -343,6 +343,7 @@ Todas las rutas usan el prefijo `/api/v1`. Los listados son paginados con `page`
 | GET | `/reports/inventory-by-category` | Unidades disponibles por categoría | 200 |
 | GET | `/reports/zones-without-deliveries` | Zonas activas sin entregas | 200 |
 | GET | `/reports/deliveries-by-department` | Entregas y unidades entregadas por departamento | 200 |
+| GET | `/reports/donations-by-month` | Donaciones y unidades donadas por mes | 200 |
 | GET | `/health` | Estado de la API y de la base de datos | 200, 503 |
 
 ---
