@@ -29,6 +29,7 @@ import {
 } from './constants/delivery-status-transitions';
 import { CreateDeliveryDto } from './dto/create-delivery.dto';
 import { FilterDeliveryDto } from './dto/filter-delivery.dto';
+import { RescheduleDeliveryDto } from './dto/reschedule-delivery.dto';
 import { UpdateDeliveryStatusDto } from './dto/update-delivery-status.dto';
 import { Delivery } from './entities/delivery.entity';
 import { DeliveryStatus } from './enums/delivery-status.enum';
@@ -134,6 +135,35 @@ export class DeliveryService {
         delivery.notes = dto.notes;
       }
       delivery.status = dto.status;
+      await manager.save(delivery);
+    });
+
+    return this.findOne(id);
+  }
+
+  async reschedule(id: string, dto: RescheduleDeliveryDto): Promise<Delivery> {
+    const today = getTodayInColombia();
+    if (dto.scheduledDate < today) {
+      throw new BadRequestException(
+        `La nueva fecha (${dto.scheduledDate}) no puede ser anterior a hoy (${today})`,
+      );
+    }
+
+    await this.dataSource.transaction(async (manager) => {
+      const delivery = await manager.findOne(Delivery, {
+        where: { id },
+        lock: { mode: 'pessimistic_write', tables: ['deliveries'] },
+      });
+      if (!delivery) {
+        throw new NotFoundException(`No se encontró la entrega con id ${id}`);
+      }
+      if (delivery.status !== DeliveryStatus.PROGRAMADA) {
+        throw new BadRequestException(
+          `Solo se pueden reprogramar entregas en estado ${DeliveryStatus.PROGRAMADA}; esta entrega está ${delivery.status}`,
+        );
+      }
+
+      delivery.scheduledDate = dto.scheduledDate;
       await manager.save(delivery);
     });
 
