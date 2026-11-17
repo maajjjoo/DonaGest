@@ -3,86 +3,103 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
+  Patch,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
+import {
+  ApiCreatedResponse,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
+import { UuidParamPipe } from '../common/pipes/uuid-param.pipe';
+import { DonorService } from './donor.service';
+import { CreateDonorDto } from './dto/create-donor.dto';
+import { FilterDonorDto } from './dto/filter-donor.dto';
+import { UpdateDonorDto } from './dto/update-donor.dto';
+import { Donor } from './entities/donor.entity';
 
-interface Donor {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-}
-
+@ApiTags('Donantes')
 @Controller('donors')
 export class DonorController {
-  private donors: Donor[] = [];
+  constructor(private readonly donorService: DonorService) {}
+
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Registrar un donante' })
+  @ApiCreatedResponse({ description: 'Donante registrado', type: Donor })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({
+    status: 409,
+    description: 'Ya existe un donante con ese documento o correo',
+  })
+  create(@Body() dto: CreateDonorDto) {
+    return this.donorService.create(dto);
+  }
 
   @Get()
-  getAllDonors() {
-    return this.donors;
+  @ApiOperation({
+    summary: 'Listar donantes con búsqueda y filtro por tipo de donante',
+  })
+  @ApiPaginatedResponse(Donor)
+  findAll(@Query() query: FilterDonorDto) {
+    return this.donorService.findAll(query);
   }
 
   @Get(':id')
-  getDonorById(@Param('id') id: number) {
-    const donor = this.donors.find((donor) => donor.id === Number(id));
-
-    if (donor) {
-      return {
-        msg: `Donante con id ${id} encontrado`,
-        data: donor,
-      };
-    } else {
-      return {
-        msg: `Donante con id ${id} no encontrado`,
-      };
-    }
-  }
-
-  @Post()
-  createDonor(@Body() donor: Donor) {
-    this.donors.push(donor);
-    return {
-      msg: 'Donante creado exitosamente',
-      data: donor,
-    };
+  @ApiOperation({ summary: 'Consultar un donante por su id' })
+  @ApiOkResponse({ type: Donor })
+  @ApiResponse({ status: 400, description: 'El id no es un UUID válido' })
+  @ApiResponse({ status: 404, description: 'Donante no encontrado' })
+  findOne(@Param('id', UuidParamPipe) id: string) {
+    return this.donorService.findOne(id);
   }
 
   @Put(':id')
-  updateDonor(@Param('id') id: number, @Body() updatedDonor: Donor) {
-    const donorIndex = this.donors.findIndex(
-      (donor) => donor.id === Number(id),
-    );
+  @ApiOperation({ summary: 'Reemplazar todos los datos de un donante' })
+  @ApiOkResponse({ type: Donor })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 404, description: 'Donante no encontrado' })
+  @ApiResponse({
+    status: 409,
+    description: 'El documento o el correo ya pertenecen a otro donante',
+  })
+  replace(@Param('id', UuidParamPipe) id: string, @Body() dto: CreateDonorDto) {
+    return this.donorService.replace(id, dto);
+  }
 
-    if (donorIndex === -1) {
-      return {
-        msg: `Donante con id ${id} no encontrado`,
-      };
-    }
-
-    this.donors[donorIndex] = { ...this.donors[donorIndex], ...updatedDonor };
-    return {
-      msg: `Donante con id ${id} actualizado exitosamente`,
-      data: this.donors[donorIndex],
-    };
+  @Patch(':id')
+  @ApiOperation({ summary: 'Actualizar parcialmente un donante' })
+  @ApiOkResponse({ type: Donor })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 404, description: 'Donante no encontrado' })
+  @ApiResponse({
+    status: 409,
+    description: 'El documento o el correo ya pertenecen a otro donante',
+  })
+  update(@Param('id', UuidParamPipe) id: string, @Body() dto: UpdateDonorDto) {
+    return this.donorService.update(id, dto);
   }
 
   @Delete(':id')
-  deleteDonor(@Param('id') id: number) {
-    const donorIndex = this.donors.findIndex(
-      (donor) => donor.id === Number(id),
-    );
-
-    if (donorIndex === -1) {
-      return {
-        msg: `Donante con id ${id} no encontrado`,
-      };
-    }
-
-    this.donors.splice(donorIndex, 1);
-    return {
-      msg: `Donante con id ${id} eliminado exitosamente`,
-    };
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Eliminar un donante' })
+  @ApiNoContentResponse({ description: 'Donante eliminado' })
+  @ApiResponse({ status: 404, description: 'Donante no encontrado' })
+  @ApiResponse({
+    status: 409,
+    description:
+      'El donante tiene donaciones registradas y no se puede eliminar',
+  })
+  remove(@Param('id', UuidParamPipe) id: string) {
+    return this.donorService.remove(id);
   }
 }
