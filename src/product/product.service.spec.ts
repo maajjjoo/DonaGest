@@ -6,6 +6,7 @@ import { Inventory } from '../inventory/entities/inventory.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { Product } from './entities/product.entity';
 import { ProductCategory } from './enums/product-category.enum';
+import { ProductSortField, SortOrder } from './enums/product-sort.enum';
 import { ProductUnit } from './enums/product-unit.enum';
 import { ProductService } from './product.service';
 
@@ -89,12 +90,37 @@ describe('ProductService', () => {
         limit: 10,
         category: ProductCategory.AGUA,
         search: 'agua',
+        sort: ProductSortField.NAME,
+        order: SortOrder.ASC,
       });
 
       const findAndCount = repository.findAndCount as jest.Mock;
       const [[options]] = findAndCount.mock.calls as [[{ where: object[] }]];
       expect(options.where).toHaveLength(2);
       expect(result.meta.total).toBe(1);
+    });
+
+    it.each([
+      [ProductSortField.NAME, SortOrder.ASC, { name: SortOrder.ASC }],
+      [ProductSortField.NAME, SortOrder.DESC, { name: SortOrder.DESC }],
+      [
+        ProductSortField.CATEGORY,
+        SortOrder.ASC,
+        { category: SortOrder.ASC, name: 'ASC' },
+      ],
+      [
+        ProductSortField.CATEGORY,
+        SortOrder.DESC,
+        { category: SortOrder.DESC, name: 'ASC' },
+      ],
+    ])('ordena por %s en orden %s', async (sort, order, expected) => {
+      repository.findAndCount?.mockResolvedValue([[], 0]);
+
+      await service.findAll({ page: 1, limit: 10, sort, order });
+
+      expect(repository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({ order: expected }),
+      );
     });
   });
 
