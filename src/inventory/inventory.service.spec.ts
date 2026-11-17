@@ -40,10 +40,12 @@ describe('InventoryService', () => {
   let service: InventoryService;
   let repository: Partial<Record<keyof Repository<Inventory>, jest.Mock>>;
   let dataSource: { transaction: jest.Mock };
+  let adjustmentRepository: { findAndCount: jest.Mock };
 
   beforeEach(async () => {
     repository = { findOne: jest.fn(), save: jest.fn() };
     dataSource = { transaction: jest.fn() };
+    adjustmentRepository = { findAndCount: jest.fn() };
 
     const moduleRef = await Test.createTestingModule({
       providers: [
@@ -51,7 +53,7 @@ describe('InventoryService', () => {
         { provide: getRepositoryToken(Inventory), useValue: repository },
         {
           provide: getRepositoryToken(InventoryAdjustment),
-          useValue: { findAndCount: jest.fn() },
+          useValue: adjustmentRepository,
         },
         { provide: DataSource, useValue: dataSource },
       ],
@@ -172,6 +174,40 @@ describe('InventoryService', () => {
       });
 
       expect(result.minimumStock).toBe(50);
+    });
+  });
+
+  describe('findAdjustments', () => {
+    it('devuelve los ajustes del inventario, del más reciente al más antiguo', async () => {
+      repository.findOne?.mockResolvedValue(buildInventory(55));
+      const adjustments = [
+        { quantity: 12, previousQuantity: 55, newQuantity: 67 },
+        { quantity: -5, previousQuantity: 60, newQuantity: 55 },
+      ];
+      adjustmentRepository.findAndCount.mockResolvedValue([adjustments, 2]);
+
+      const result = await service.findAdjustments(INVENTORY_ID, {
+        page: 1,
+        limit: 10,
+      });
+
+      expect(adjustmentRepository.findAndCount).toHaveBeenCalledWith({
+        where: { inventory: { id: INVENTORY_ID } },
+        order: { createdAt: 'DESC' },
+        skip: 0,
+        take: 10,
+      });
+      expect(result.data).toBe(adjustments);
+      expect(result.meta.total).toBe(2);
+    });
+
+    it('lanza 404 si el inventario no existe', async () => {
+      repository.findOne?.mockResolvedValue(null);
+
+      await expect(
+        service.findAdjustments(INVENTORY_ID, { page: 1, limit: 10 }),
+      ).rejects.toThrow(NotFoundException);
+      expect(adjustmentRepository.findAndCount).not.toHaveBeenCalled();
     });
   });
 });
