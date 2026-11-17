@@ -1,15 +1,19 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import {
   ApiCreatedResponse,
+  ApiNoContentResponse,
   ApiOkResponse,
   ApiOperation,
   ApiResponse,
@@ -19,6 +23,7 @@ import { ApiPaginatedResponse } from '../common/decorators/api-paginated-respons
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { UuidParamPipe } from '../common/pipes/uuid-param.pipe';
 import { CreateProductDto } from './dto/create-product.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
 import { Product } from './entities/product.entity';
 import { ProductService } from './product.service';
 
@@ -58,5 +63,54 @@ export class ProductController {
   @ApiResponse({ status: 404, description: 'Producto no encontrado' })
   findOne(@Param('id', UuidParamPipe) id: string) {
     return this.productService.findOne(id);
+  }
+
+  @Put(':id')
+  @ApiOperation({ summary: 'Reemplazar todos los datos de un producto' })
+  @ApiOkResponse({ type: Product })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 404, description: 'Producto no encontrado' })
+  @ApiResponse({
+    status: 409,
+    description: 'Ya existe un producto con ese nombre',
+  })
+  replace(
+    @Param('id', UuidParamPipe) id: string,
+    @Body() dto: CreateProductDto,
+  ) {
+    return this.productService.replace(id, dto);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Actualizar parcialmente un producto' })
+  @ApiOkResponse({ type: Product })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 404, description: 'Producto no encontrado' })
+  @ApiResponse({
+    status: 409,
+    description: 'Ya existe un producto con ese nombre',
+  })
+  update(
+    @Param('id', UuidParamPipe) id: string,
+    @Body() dto: UpdateProductDto,
+  ) {
+    return this.productService.update(id, dto);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Eliminar un producto',
+    description:
+      'Su inventario se elimina junto con él. Si el producto ya tiene donaciones o entregas, no se puede eliminar.',
+  })
+  @ApiNoContentResponse({ description: 'Producto eliminado' })
+  @ApiResponse({ status: 404, description: 'Producto no encontrado' })
+  @ApiResponse({
+    status: 409,
+    description: 'El producto tiene donaciones o entregas registradas',
+  })
+  remove(@Param('id', UuidParamPipe) id: string) {
+    return this.productService.remove(id);
   }
 }

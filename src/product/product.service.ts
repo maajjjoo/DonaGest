@@ -14,6 +14,7 @@ import {
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 import { Inventory } from '../inventory/entities/inventory.entity';
 import { CreateProductDto } from './dto/create-product.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
 import { Product } from './entities/product.entity';
 
 @Injectable()
@@ -55,6 +56,28 @@ export class ProductService {
       throw new NotFoundException(`No se encontró el producto con id ${id}`);
     }
     return product;
+  }
+
+  async replace(id: string, dto: CreateProductDto): Promise<Product> {
+    const product = await this.findOne(id);
+    await this.ensureUniqueName(dto.name, id);
+    const { description = null, ...data } = dto;
+    Object.assign(product, data, { description });
+    return this.productRepository.save(product);
+  }
+
+  async update(id: string, dto: UpdateProductDto): Promise<Product> {
+    const product = await this.findOne(id);
+    if (dto.name) {
+      await this.ensureUniqueName(dto.name, id);
+    }
+    const updated = this.productRepository.merge(product, dto);
+    return this.productRepository.save(updated);
+  }
+
+  async remove(id: string): Promise<void> {
+    const product = await this.findOne(id);
+    await this.productRepository.remove(product);
   }
 
   private async ensureUniqueName(name: string, excludeId?: string) {
