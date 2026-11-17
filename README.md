@@ -465,7 +465,7 @@ Con esos mismos datos:
 - **Top de donantes**: el primero es la Distribuidora La Esperanza S.A.S., con 1.450 unidades en 2 donaciones.
 - **Zonas sin entregas**: Quibdó (ALTA) y luego Dosquebradas (MEDIA).
 
-`GET /health` responde `{ "status": "ok", "database": "up", "timestamp": "..." }`. Si PostgreSQL no responde, devuelve **503** con `"status": "error"` y `"database": "down"`.
+`GET /health` responde `{ "status": "ok", "database": "up", "version": "1.1.0", "uptime": 3600, "timestamp": "..." }`, donde `uptime` son los segundos que lleva la API en línea. Si PostgreSQL no responde, devuelve **503** con `"status": "error"` y `"database": "down"`.
 
 ---
 
