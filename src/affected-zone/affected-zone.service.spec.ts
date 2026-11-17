@@ -95,6 +95,40 @@ describe('AffectedZoneService', () => {
     });
   });
 
+  it('busca por nombre o municipio sin perder los demás filtros', async () => {
+    repository.findAndCount?.mockResolvedValue([[buildZone()], 1]);
+
+    await service.findAll({
+      page: 1,
+      limit: 10,
+      search: 'san marcos',
+      department: ColombianDepartment.SUCRE,
+    });
+
+    const findAndCount = repository.findAndCount as jest.Mock;
+    const [[options]] = findAndCount.mock.calls as [
+      [{ where: Record<string, unknown>[] }],
+    ];
+    expect(options.where).toHaveLength(2);
+    expect(options.where[0]).toMatchObject({
+      department: ColombianDepartment.SUCRE,
+    });
+    expect(options.where[0]).toHaveProperty('name');
+    expect(options.where[1]).toHaveProperty('municipality');
+  });
+
+  it('escapa los comodines de la búsqueda', async () => {
+    repository.findAndCount?.mockResolvedValue([[], 0]);
+
+    await service.findAll({ page: 1, limit: 10, search: '100%_seguro' });
+
+    const findAndCount = repository.findAndCount as jest.Mock;
+    const [[options]] = findAndCount.mock.calls as [
+      [{ where: { name: { value: string } }[] }],
+    ];
+    expect(options.where[0].name.value).toBe('%100\\%\\_seguro%');
+  });
+
   it('devuelve la zona cuando existe', async () => {
     const zone = buildZone();
     repository.findOne?.mockResolvedValue(zone);
