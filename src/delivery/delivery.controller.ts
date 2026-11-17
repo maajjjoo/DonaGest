@@ -58,6 +58,17 @@ export class DeliveryController {
     return this.deliveryService.findAll(query);
   }
 
+  @Get('upcoming')
+  @ApiOperation({
+    summary: 'Entregas programadas para los próximos 7 días',
+    description:
+      'Incluye hoy y los siguientes 7 días (hora de Colombia), solo en estado PROGRAMADA. Si dos entregas son el mismo día, sale primero la zona con mayor prioridad.',
+  })
+  @ApiOkResponse({ type: Delivery, isArray: true })
+  findUpcoming() {
+    return this.deliveryService.findUpcoming();
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Consultar una entrega por su id' })
   @ApiOkResponse({ type: Delivery })

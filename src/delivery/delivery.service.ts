@@ -13,7 +13,7 @@ import {
   Repository,
 } from 'typeorm';
 import { AffectedZone } from '../affected-zone/entities/affected-zone.entity';
-import { getTodayInColombia } from '../common/helpers/date.helper';
+import { addDays, getTodayInColombia } from '../common/helpers/date.helper';
 import {
   buildPaginatedResponse,
   getSkip,
@@ -30,6 +30,8 @@ import { FilterDeliveryDto } from './dto/filter-delivery.dto';
 import { UpdateDeliveryStatusDto } from './dto/update-delivery-status.dto';
 import { Delivery } from './entities/delivery.entity';
 import { DeliveryStatus } from './enums/delivery-status.enum';
+
+const UPCOMING_DAYS = 7;
 
 @Injectable()
 export class DeliveryService {
@@ -161,6 +163,18 @@ export class DeliveryService {
       take: limit,
     });
     return buildPaginatedResponse(data, total, page, limit);
+  }
+
+  async findUpcoming(): Promise<Delivery[]> {
+    const today = getTodayInColombia();
+    return this.deliveryRepository.find({
+      where: {
+        status: DeliveryStatus.PROGRAMADA,
+        scheduledDate: Between(today, addDays(today, UPCOMING_DAYS)),
+      },
+      relations: { affectedZone: true, product: true },
+      order: { scheduledDate: 'ASC', affectedZone: { priority: 'DESC' } },
+    });
   }
 
   async findOne(id: string): Promise<Delivery> {
