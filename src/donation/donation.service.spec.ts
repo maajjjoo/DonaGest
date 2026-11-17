@@ -41,6 +41,7 @@ describe('DonationService', () => {
   let service: DonationService;
   let repository: {
     findOne: jest.Mock;
+    find: jest.Mock;
     findAndCount: jest.Mock;
     createQueryBuilder: jest.Mock;
   };
@@ -51,6 +52,7 @@ describe('DonationService', () => {
   beforeEach(async () => {
     repository = {
       findOne: jest.fn().mockResolvedValue(buildDonation()),
+      find: jest.fn(),
       findAndCount: jest.fn().mockResolvedValue([[], 0]),
       createQueryBuilder: jest.fn(),
     };
@@ -219,6 +221,23 @@ describe('DonationService', () => {
         }),
       ).rejects.toThrow(BadRequestException);
       expect(repository.findAndCount).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('findRecent', () => {
+    it('trae las últimas 10 donaciones recibidas con donante y producto', async () => {
+      const donations = [buildDonation(), buildDonation()];
+      repository.find.mockResolvedValue(donations);
+
+      const result = await service.findRecent();
+
+      expect(repository.find).toHaveBeenCalledWith({
+        where: { status: DonationStatus.RECIBIDA },
+        relations: { donor: true, product: true },
+        order: { createdAt: 'DESC' },
+        take: 10,
+      });
+      expect(result).toBe(donations);
     });
   });
 
