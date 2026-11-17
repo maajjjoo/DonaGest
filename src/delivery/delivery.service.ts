@@ -12,7 +12,9 @@ import {
   MoreThanOrEqual,
   Repository,
 } from 'typeorm';
+import { AffectedZoneService } from '../affected-zone/affected-zone.service';
 import { AffectedZone } from '../affected-zone/entities/affected-zone.entity';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { addDays, getTodayInColombia } from '../common/helpers/date.helper';
 import {
   buildPaginatedResponse,
@@ -39,6 +41,7 @@ export class DeliveryService {
     @InjectRepository(Delivery)
     private readonly deliveryRepository: Repository<Delivery>,
     private readonly inventoryService: InventoryService,
+    private readonly affectedZoneService: AffectedZoneService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -163,6 +166,18 @@ export class DeliveryService {
       take: limit,
     });
     return buildPaginatedResponse(data, total, page, limit);
+  }
+
+  async findByZone(
+    zoneId: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponse<Delivery>> {
+    await this.affectedZoneService.findOne(zoneId);
+    return this.findAll({
+      page: query.page,
+      limit: query.limit,
+      affectedZoneId: zoneId,
+    });
   }
 
   async findUpcoming(): Promise<Delivery[]> {
