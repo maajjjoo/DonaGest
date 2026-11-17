@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AffectedZoneService } from '../affected-zone/affected-zone.service';
 import { AffectedZone } from '../affected-zone/entities/affected-zone.entity';
+import { ColombianDepartment } from '../affected-zone/enums/colombian-department.enum';
 import { ZonePriority } from '../affected-zone/enums/zone-priority.enum';
 import { Delivery } from '../delivery/entities/delivery.entity';
 import { DeliveryStatus } from '../delivery/enums/delivery-status.enum';
@@ -18,6 +19,7 @@ import {
   SummaryReportDto,
   ZonesByPriorityDto,
 } from './dto/summary-report.dto';
+import { DeliveriesByDepartmentDto } from './dto/deliveries-by-department.dto';
 import { InventoryByCategoryDto } from './dto/inventory-by-category.dto';
 import { TopDonorDto } from './dto/top-donor.dto';
 import { ZoneReportDto } from './dto/zone-report.dto';
@@ -251,5 +253,54 @@ export class ReportService {
       .orderBy('zone.priority', 'DESC')
       .addOrderBy('zone.affectedFamilies', 'DESC')
       .getMany();
+  }
+
+  async getDeliveriesByDepartment(): Promise<DeliveriesByDepartmentDto[]> {
+    const rows = await this.deliveryRepository
+      .createQueryBuilder('delivery')
+      .innerJoin('delivery.affectedZone', 'zone')
+      .select('zone.department', 'department')
+      .addSelect('COUNT(delivery.id)', 'totalDeliveries')
+      .addSelect(
+        'COUNT(delivery.id) FILTER (WHERE delivery.status IN (:...pending))',
+        'pendingDeliveries',
+      )
+      .addSelect(
+        'COUNT(delivery.id) FILTER (WHERE delivery.status = :delivered)',
+        'completedDeliveries',
+      )
+      .addSelect(
+        'COUNT(delivery.id) FILTER (WHERE delivery.status = :cancelled)',
+        'cancelledDeliveries',
+      )
+      .addSelect(
+        'COALESCE(SUM(delivery.quantity) FILTER (WHERE delivery.status = :delivered), 0)',
+        'unitsDelivered',
+      )
+      .setParameters({
+        pending: [DeliveryStatus.PROGRAMADA, DeliveryStatus.EN_TRANSITO],
+        delivered: DeliveryStatus.ENTREGADA,
+        cancelled: DeliveryStatus.CANCELADA,
+      })
+      .groupBy('zone.department')
+      .orderBy('"unitsDelivered"', 'DESC')
+      .addOrderBy('"totalDeliveries"', 'DESC')
+      .getRawMany<{
+        department: ColombianDepartment;
+        totalDeliveries: string;
+        pendingDeliveries: string;
+        completedDeliveries: string;
+        cancelledDeliveries: string;
+        unitsDelivered: string;
+      }>();
+
+    return rows.map((row) => ({
+      department: row.department,
+      totalDeliveries: Number(row.totalDeliveries),
+      pendingDeliveries: Number(row.pendingDeliveries),
+      completedDeliveries: Number(row.completedDeliveries),
+      cancelledDeliveries: Number(row.cancelledDeliveries),
+      unitsDelivered: Number(row.unitsDelivered),
+    }));
   }
 }
