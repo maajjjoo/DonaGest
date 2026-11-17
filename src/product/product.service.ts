@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, ILike, Repository } from 'typeorm';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { escapeLike } from '../common/helpers/escape-like.helper';
 import {
   buildPaginatedResponse,
@@ -47,6 +48,20 @@ export class ProductService {
 
     const [data, total] = await this.productRepository.findAndCount({
       where,
+      relations: { inventory: true },
+      order: { name: 'ASC' },
+      skip: getSkip(page, limit),
+      take: limit,
+    });
+    return buildPaginatedResponse(data, total, page, limit);
+  }
+
+  async findOutOfStock(
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponse<Product>> {
+    const { page, limit } = query;
+    const [data, total] = await this.productRepository.findAndCount({
+      where: { inventory: { availableQuantity: 0 } },
       relations: { inventory: true },
       order: { name: 'ASC' },
       skip: getSkip(page, limit),

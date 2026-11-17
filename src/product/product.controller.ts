@@ -20,6 +20,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { UuidParamPipe } from '../common/pipes/uuid-param.pipe';
 import { CreateProductDto } from './dto/create-product.dto';
 import { FilterProductDto } from './dto/filter-product.dto';
@@ -57,6 +58,16 @@ export class ProductController {
   @ApiPaginatedResponse(Product)
   findAll(@Query() query: FilterProductDto) {
     return this.productService.findAll(query);
+  }
+
+  @Get('out-of-stock')
+  @ApiOperation({
+    summary: 'Listar productos agotados',
+    description: 'Productos cuyo inventario disponible está en 0.',
+  })
+  @ApiPaginatedResponse(Product)
+  findOutOfStock(@Query() query: PaginationQueryDto) {
+    return this.productService.findOutOfStock(query);
   }
 
   @Get(':id')
