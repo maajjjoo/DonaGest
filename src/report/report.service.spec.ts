@@ -27,6 +27,7 @@ const buildQueryBuilder = (result: {
     orderBy: jest.fn(),
     addOrderBy: jest.fn(),
     limit: jest.fn(),
+    setParameters: jest.fn(),
     getRawMany: jest.fn().mockResolvedValue(result.raw ?? []),
     getCount: jest.fn().mockResolvedValue(result.count ?? 0),
     getMany: jest.fn().mockResolvedValue(result.many ?? []),
@@ -41,6 +42,7 @@ const buildQueryBuilder = (result: {
     'orderBy',
     'addOrderBy',
     'limit',
+    'setParameters',
   ] as const) {
     qb[key].mockReturnValue(qb);
   }
@@ -276,6 +278,82 @@ describe('ReportService', () => {
         'DESC',
       );
       expect(result).toBe(zones);
+    });
+  });
+
+  describe('getDeliveriesByDepartment', () => {
+    it('convierte los conteos por departamento a número', async () => {
+      const qb = buildQueryBuilder({
+        raw: [
+          {
+            department: 'Sucre',
+            totalDeliveries: '3',
+            pendingDeliveries: '1',
+            completedDeliveries: '2',
+            cancelledDeliveries: '0',
+            unitsDelivered: '540',
+          },
+        ],
+      });
+      deliveryRepository.createQueryBuilder.mockReturnValue(qb);
+
+      const result = await service.getDeliveriesByDepartment();
+
+      expect(qb.groupBy).toHaveBeenCalledWith('zone.department');
+      expect(qb.setParameters).toHaveBeenCalledWith({
+        pending: ['PROGRAMADA', 'EN_TRANSITO'],
+        delivered: 'ENTREGADA',
+        cancelled: 'CANCELADA',
+      });
+      expect(result).toEqual([
+        {
+          department: 'Sucre',
+          totalDeliveries: 3,
+          pendingDeliveries: 1,
+          completedDeliveries: 2,
+          cancelledDeliveries: 0,
+          unitsDelivered: 540,
+        },
+      ]);
+    });
+  });
+
+  describe('getDonationsByMonth', () => {
+    it('agrupa por mes en hora de Colombia y ordena del más antiguo al más reciente', async () => {
+      const qb = buildQueryBuilder({
+        raw: [
+          {
+            month: '2026-10',
+            receivedDonations: '1',
+            cancelledDonations: '0',
+            unitsDonated: '800',
+            donors: '1',
+          },
+          {
+            month: '2026-11',
+            receivedDonations: '4',
+            cancelledDonations: '1',
+            unitsDonated: '1810',
+            donors: '3',
+          },
+        ],
+      });
+      donationRepository.createQueryBuilder.mockReturnValue(qb);
+
+      const result = await service.getDonationsByMonth();
+
+      expect(qb.select).toHaveBeenCalledWith(
+        expect.stringContaining("AT TIME ZONE 'America/Bogota'"),
+        'month',
+      );
+      expect(qb.orderBy).toHaveBeenCalledWith('month', 'ASC');
+      expect(result[1]).toEqual({
+        month: '2026-11',
+        receivedDonations: 4,
+        cancelledDonations: 1,
+        unitsDonated: 1810,
+        donors: 3,
+      });
     });
   });
 });
