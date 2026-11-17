@@ -4,8 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
-import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { DataSource, FindOptionsWhere, Repository } from 'typeorm';
 import {
   buildPaginatedResponse,
   getSkip,
@@ -15,6 +14,7 @@ import { Donor } from '../donor/entities/donor.entity';
 import { InventoryService } from '../inventory/inventory.service';
 import { Product } from '../product/entities/product.entity';
 import { CreateDonationDto } from './dto/create-donation.dto';
+import { FilterDonationDto } from './dto/filter-donation.dto';
 import { Donation } from './entities/donation.entity';
 import { DonationStatus } from './enums/donation-status.enum';
 
@@ -95,10 +95,16 @@ export class DonationService {
   }
 
   async findAll(
-    query: PaginationQueryDto,
+    query: FilterDonationDto,
   ): Promise<PaginatedResponse<Donation>> {
-    const { page, limit } = query;
+    const { page, limit, donorId, productId, status } = query;
+    const where: FindOptionsWhere<Donation> = {};
+    if (donorId) where.donor = { id: donorId };
+    if (productId) where.product = { id: productId };
+    if (status) where.status = status;
+
     const [data, total] = await this.donationRepository.findAndCount({
+      where,
       relations: { donor: true, product: true },
       order: { createdAt: 'DESC' },
       skip: getSkip(page, limit),

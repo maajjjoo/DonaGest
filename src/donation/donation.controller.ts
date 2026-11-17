@@ -17,10 +17,10 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
-import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { UuidParamPipe } from '../common/pipes/uuid-param.pipe';
 import { DonationService } from './donation.service';
 import { CreateDonationDto } from './dto/create-donation.dto';
+import { FilterDonationDto } from './dto/filter-donation.dto';
 import { Donation } from './entities/donation.entity';
 
 @ApiTags('Donaciones')
@@ -46,9 +46,12 @@ export class DonationController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Listar donaciones, las más recientes primero' })
+  @ApiOperation({
+    summary:
+      'Listar donaciones con filtros por donante, producto y estado, las más recientes primero',
+  })
   @ApiPaginatedResponse(Donation)
-  findAll(@Query() query: PaginationQueryDto) {
+  findAll(@Query() query: FilterDonationDto) {
     return this.donationService.findAll(query);
   }
 
