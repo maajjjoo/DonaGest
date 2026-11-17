@@ -20,6 +20,7 @@ import { ApiPaginatedResponse } from '../common/decorators/api-paginated-respons
 import { UuidParamPipe } from '../common/pipes/uuid-param.pipe';
 import { DonationService } from './donation.service';
 import { CreateDonationDto } from './dto/create-donation.dto';
+import { DonationSummaryItemDto } from './dto/donation-summary.dto';
 import { FilterDonationDto } from './dto/filter-donation.dto';
 import { Donation } from './entities/donation.entity';
 
@@ -53,6 +54,16 @@ export class DonationController {
   @ApiPaginatedResponse(Donation)
   findAll(@Query() query: FilterDonationDto) {
     return this.donationService.findAll(query);
+  }
+
+  @Get('summary')
+  @ApiOperation({
+    summary: 'Total donado agrupado por producto',
+    description: 'Solo cuenta las donaciones RECIBIDAS (no las anuladas).',
+  })
+  @ApiOkResponse({ type: DonationSummaryItemDto, isArray: true })
+  getSummary() {
+    return this.donationService.getSummary();
   }
 
   @Get(':id')

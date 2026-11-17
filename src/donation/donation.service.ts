@@ -14,6 +14,7 @@ import { Donor } from '../donor/entities/donor.entity';
 import { InventoryService } from '../inventory/inventory.service';
 import { Product } from '../product/entities/product.entity';
 import { CreateDonationDto } from './dto/create-donation.dto';
+import { DonationSummaryItemDto } from './dto/donation-summary.dto';
 import { FilterDonationDto } from './dto/filter-donation.dto';
 import { Donation } from './entities/donation.entity';
 import { DonationStatus } from './enums/donation-status.enum';
@@ -111,6 +112,33 @@ export class DonationService {
       take: limit,
     });
     return buildPaginatedResponse(data, total, page, limit);
+  }
+
+  async getSummary(): Promise<DonationSummaryItemDto[]> {
+    const rows = await this.donationRepository
+      .createQueryBuilder('donation')
+      .innerJoin('donation.product', 'product')
+      .select('product.id', 'productId')
+      .addSelect('product.name', 'productName')
+      .addSelect('product.category', 'category')
+      .addSelect('product.unit', 'unit')
+      .addSelect('SUM(donation.quantity)', 'totalQuantity')
+      .addSelect('COUNT(donation.id)', 'donationsCount')
+      .where('donation.status = :status', { status: DonationStatus.RECIBIDA })
+      .groupBy('product.id')
+      .orderBy('"totalQuantity"', 'DESC')
+      .getRawMany<
+        Omit<DonationSummaryItemDto, 'totalQuantity' | 'donationsCount'> & {
+          totalQuantity: string;
+          donationsCount: string;
+        }
+      >();
+
+    return rows.map((row) => ({
+      ...row,
+      totalQuantity: Number(row.totalQuantity),
+      donationsCount: Number(row.donationsCount),
+    }));
   }
 
   async findOne(id: string): Promise<Donation> {
