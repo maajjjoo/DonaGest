@@ -49,6 +49,10 @@ describe('InventoryService', () => {
       providers: [
         InventoryService,
         { provide: getRepositoryToken(Inventory), useValue: repository },
+        {
+          provide: getRepositoryToken(InventoryAdjustment),
+          useValue: { findAndCount: jest.fn() },
+        },
         { provide: DataSource, useValue: dataSource },
       ],
     }).compile();

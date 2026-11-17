@@ -21,6 +21,8 @@ export class InventoryService {
   constructor(
     @InjectRepository(Inventory)
     private readonly inventoryRepository: Repository<Inventory>,
+    @InjectRepository(InventoryAdjustment)
+    private readonly adjustmentRepository: Repository<InventoryAdjustment>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -50,6 +52,21 @@ export class InventoryService {
       .offset(getSkip(page, limit))
       .limit(limit)
       .getManyAndCount();
+    return buildPaginatedResponse(data, total, page, limit);
+  }
+
+  async findAdjustments(
+    id: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponse<InventoryAdjustment>> {
+    await this.findOne(id);
+    const { page, limit } = query;
+    const [data, total] = await this.adjustmentRepository.findAndCount({
+      where: { inventory: { id } },
+      order: { createdAt: 'DESC' },
+      skip: getSkip(page, limit),
+      take: limit,
+    });
     return buildPaginatedResponse(data, total, page, limit);
   }
 
