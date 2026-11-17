@@ -8,6 +8,7 @@ import {
 import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { UuidParamPipe } from '../common/pipes/uuid-param.pipe';
+import { AdjustInventoryDto } from './dto/adjust-inventory.dto';
 import { UpdateMinimumStockDto } from './dto/update-minimum-stock.dto';
 import { Inventory } from './entities/inventory.entity';
 import { InventoryService } from './inventory.service';
@@ -59,5 +60,25 @@ export class InventoryController {
     @Body() dto: UpdateMinimumStockDto,
   ) {
     return this.inventoryService.updateMinimumStock(id, dto);
+  }
+
+  @Patch(':id/adjust')
+  @ApiOperation({
+    summary: 'Ajustar manualmente la cantidad disponible',
+    description:
+      'Suma o resta unidades con un motivo obligatorio (por ejemplo "producto vencido"). El inventario nunca puede quedar en negativo y cada ajuste queda registrado.',
+  })
+  @ApiOkResponse({ type: Inventory })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 404, description: 'Inventario no encontrado' })
+  @ApiResponse({
+    status: 409,
+    description: 'Stock insuficiente para descontar esa cantidad',
+  })
+  adjust(
+    @Param('id', UuidParamPipe) id: string,
+    @Body() dto: AdjustInventoryDto,
+  ) {
+    return this.inventoryService.adjust(id, dto);
   }
 }
