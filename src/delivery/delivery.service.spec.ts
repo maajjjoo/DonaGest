@@ -223,4 +223,48 @@ describe('DeliveryService', () => {
       expect(manager.findOne).not.toHaveBeenCalled();
     });
   });
+
+  describe('reschedule', () => {
+    const nextWeek = addDays(getTodayInColombia(), 7);
+
+    it('cambia la fecha de una entrega PROGRAMADA', async () => {
+      const delivery = buildDelivery(DeliveryStatus.PROGRAMADA);
+      manager.findOne.mockResolvedValueOnce(delivery);
+
+      await service.reschedule(DELIVERY_ID, { scheduledDate: nextWeek });
+
+      expect(delivery.scheduledDate).toBe(nextWeek);
+      expect(manager.save).toHaveBeenCalledWith(delivery);
+    });
+
+    it.each([
+      DeliveryStatus.EN_TRANSITO,
+      DeliveryStatus.ENTREGADA,
+      DeliveryStatus.CANCELADA,
+    ])('lanza 400 si la entrega está %s', async (status) => {
+      manager.findOne.mockResolvedValueOnce(buildDelivery(status));
+
+      await expect(
+        service.reschedule(DELIVERY_ID, { scheduledDate: nextWeek }),
+      ).rejects.toThrow(BadRequestException);
+      expect(manager.save).not.toHaveBeenCalled();
+    });
+
+    it('lanza 400 si la nueva fecha está en el pasado', async () => {
+      await expect(
+        service.reschedule(DELIVERY_ID, {
+          scheduledDate: addDays(getTodayInColombia(), -1),
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(manager.findOne).not.toHaveBeenCalled();
+    });
+
+    it('lanza 404 si la entrega no existe', async () => {
+      manager.findOne.mockResolvedValueOnce(null);
+
+      await expect(
+        service.reschedule(DELIVERY_ID, { scheduledDate: nextWeek }),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
 });
