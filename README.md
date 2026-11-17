@@ -329,6 +329,7 @@ Todas las rutas usan el prefijo `/api/v1`. Los listados son paginados con `page`
 | GET | `/deliveries/upcoming` | Entregas programadas de hoy a 7 días | 200 |
 | GET | `/deliveries/:id` | Consultar una entrega | 200, 400, 404 |
 | PATCH | `/deliveries/:id/status` | Cambiar el estado | 200, 400, 404 |
+| PATCH | `/deliveries/:id/reschedule` | Cambiar la fecha (solo PROGRAMADA y sin fechas pasadas) | 200, 400, 404 |
 
 ### Reportes y salud
 

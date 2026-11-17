@@ -21,6 +21,7 @@ import { UuidParamPipe } from '../common/pipes/uuid-param.pipe';
 import { DeliveryService } from './delivery.service';
 import { CreateDeliveryDto } from './dto/create-delivery.dto';
 import { FilterDeliveryDto } from './dto/filter-delivery.dto';
+import { RescheduleDeliveryDto } from './dto/reschedule-delivery.dto';
 import { UpdateDeliveryStatusDto } from './dto/update-delivery-status.dto';
 import { Delivery } from './entities/delivery.entity';
 
@@ -95,5 +96,25 @@ export class DeliveryController {
     @Body() dto: UpdateDeliveryStatusDto,
   ) {
     return this.deliveryService.updateStatus(id, dto);
+  }
+
+  @Patch(':id/reschedule')
+  @ApiOperation({
+    summary: 'Cambiar la fecha de una entrega',
+    description:
+      'Solo se pueden reprogramar entregas PROGRAMADAS y la nueva fecha no puede estar en el pasado (hora de Colombia).',
+  })
+  @ApiOkResponse({ type: Delivery })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Fecha pasada, fecha inválida o entrega que no está PROGRAMADA',
+  })
+  @ApiResponse({ status: 404, description: 'Entrega no encontrada' })
+  reschedule(
+    @Param('id', UuidParamPipe) id: string,
+    @Body() dto: RescheduleDeliveryDto,
+  ) {
+    return this.deliveryService.reschedule(id, dto);
   }
 }
