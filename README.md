@@ -264,7 +264,8 @@ Todas las rutas usan el prefijo `/api/v1`. Los listados son paginados con `page`
 | Método | Ruta | Descripción | Códigos |
 |---|---|---|---|
 | POST | `/affected-zones` | Registrar una zona | 201, 400 |
-| GET | `/affected-zones` | Listar con filtros `department`, `priority`, `emergencyType`, `isActive` (de CRITICA a BAJA) | 200, 400 |
+| GET | `/affected-zones` | Listar con `search` (nombre o municipio) y filtros `department`, `priority`, `emergencyType`, `isActive` (de CRITICA a BAJA) | 200, 400 |
+| GET | `/affected-zones/stats` | Zonas y familias afectadas por departamento | 200 |
 | GET | `/affected-zones/:id` | Consultar una zona | 200, 400, 404 |
 | PUT | `/affected-zones/:id` | Reemplazar todos los datos | 200, 400, 404 |
 | PATCH | `/affected-zones/:id` | Actualizar algunos datos | 200, 400, 404 |
