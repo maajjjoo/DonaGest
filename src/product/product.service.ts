@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, ILike, Repository } from 'typeorm';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { isForeignKeyViolation } from '../common/helpers/database-error.helper';
 import { escapeLike } from '../common/helpers/escape-like.helper';
 import {
   buildPaginatedResponse,
@@ -17,6 +18,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { FilterProductDto } from './dto/filter-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Product } from './entities/product.entity';
+import { ProductSortField } from './enums/product-sort.enum';
 
 @Injectable()
 export class ProductService {
@@ -36,7 +38,7 @@ export class ProductService {
   }
 
   async findAll(query: FilterProductDto): Promise<PaginatedResponse<Product>> {
-    const { page, limit, category, search } = query;
+    const { page, limit, category, search, sort, order } = query;
     const base: FindOptionsWhere<Product> = category ? { category } : {};
     const pattern = search ? ILike(`%${escapeLike(search)}%`) : undefined;
     const where = pattern
@@ -49,7 +51,10 @@ export class ProductService {
     const [data, total] = await this.productRepository.findAndCount({
       where,
       relations: { inventory: true },
-      order: { name: 'ASC' },
+      order:
+        sort === ProductSortField.CATEGORY
+          ? { category: order, name: 'ASC' }
+          : { name: order },
       skip: getSkip(page, limit),
       take: limit,
     });
@@ -100,7 +105,16 @@ export class ProductService {
 
   async remove(id: string): Promise<void> {
     const product = await this.findOne(id);
-    await this.productRepository.remove(product);
+    try {
+      await this.productRepository.remove(product);
+    } catch (error) {
+      if (isForeignKeyViolation(error)) {
+        throw new ConflictException(
+          `No se puede eliminar "${product.name}" porque tiene donaciones o entregas registradas`,
+        );
+      }
+      throw error;
+    }
   }
 
   private async ensureUniqueName(name: string, excludeId?: string) {

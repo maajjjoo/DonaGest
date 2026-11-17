@@ -291,7 +291,7 @@ Todas las rutas usan el prefijo `/api/v1`. Los listados son paginados con `page`
 | Método | Ruta | Descripción | Códigos |
 |---|---|---|---|
 | POST | `/products` | Registrar un producto (crea su inventario en 0) | 201, 400, 409 |
-| GET | `/products` | Listar con `category` y `search` | 200, 400 |
+| GET | `/products` | Listar con `category`, `search` y orden `sort` (`name` o `category`) y `order` (`ASC` o `DESC`) | 200, 400 |
 | GET | `/products/out-of-stock` | Productos con inventario en 0 | 200 |
 | GET | `/products/:id` | Consultar un producto con su inventario | 200, 400, 404 |
 | PUT | `/products/:id` | Reemplazar todos los datos | 200, 400, 404, 409 |
@@ -303,8 +303,9 @@ Todas las rutas usan el prefijo `/api/v1`. Los listados son paginados con `page`
 | Método | Ruta | Descripción | Códigos |
 |---|---|---|---|
 | GET | `/inventory` | Inventario de todos los productos | 200 |
-| GET | `/inventory/alerts` | Productos en el stock mínimo o por debajo | 200 |
+| GET | `/inventory/alerts` | Productos en el stock mínimo o por debajo, con filtro `category` | 200, 400 |
 | GET | `/inventory/product/:productId` | Inventario de un producto | 200, 400, 404 |
+| GET | `/inventory/:id/adjustments` | Historial de ajustes manuales | 200, 400, 404 |
 | PATCH | `/inventory/:id/minimum-stock` | Cambiar el stock mínimo | 200, 400, 404 |
 | PATCH | `/inventory/:id/adjust` | Ajuste manual con motivo obligatorio | 200, 400, 404, 409 |
 
@@ -313,7 +314,8 @@ Todas las rutas usan el prefijo `/api/v1`. Los listados son paginados con `page`
 | Método | Ruta | Descripción | Códigos |
 |---|---|---|---|
 | POST | `/donations` | Registrar una donación (suma al inventario) | 201, 400, 404 |
-| GET | `/donations` | Listar con `donorId`, `productId` y `status` (más recientes primero) | 200, 400 |
+| GET | `/donations` | Listar con `donorId`, `productId`, `status` y rango de fechas `from` y `to` (más recientes primero) | 200, 400 |
+| GET | `/donations/recent` | Últimas 10 donaciones recibidas | 200 |
 | GET | `/donations/summary` | Total donado por producto | 200 |
 | GET | `/donations/:id` | Consultar una donación | 200, 400, 404 |
 | PATCH | `/donations/:id/cancel` | Anular (descuenta del inventario) | 200, 400, 404, 409 |
@@ -366,6 +368,32 @@ Todas las rutas usan el prefijo `/api/v1`. Los listados son paginados con `page`
    - Celular: 10 dígitos que empiezan por 3.
    - Documento según su tipo: CC y CE de 6 a 10 dígitos; NIT de 9 dígitos con dígito de verificación opcional; pasaporte de 6 a 10 letras o números.
 9. **Ajustes manuales**: requieren un motivo de al menos 5 caracteres y quedan registrados en `inventory_adjustments`.
+
+### Reglas de inventario
+
+| Situación | Qué pasa con el inventario |
+|---|---|
+| Se crea un producto | Se crea su inventario con 0 unidades y stock mínimo de 10 |
+| Se registra una donación | Suma la cantidad donada |
+| Se anula una donación | Resta la cantidad; si ya no alcanza (por ejemplo, porque se entregó), responde 409 y la donación sigue RECIBIDA |
+| Se programa una entrega | Resta la cantidad; si no alcanza, responde 409 y no se guarda la entrega |
+| Se cancela una entrega | Devuelve la cantidad |
+| Se marca una entrega como ENTREGADA | No cambia, porque ya se había descontado al programarla |
+| Ajuste manual (`PATCH /inventory/:id/adjust`) | Suma o resta con un motivo obligatorio y queda en el historial (`GET /inventory/:id/adjustments`) |
+
+- El inventario nunca queda en negativo. Mientras se cambia, la fila se bloquea para que dos pedidos al mismo tiempo no descuenten de más.
+- Un producto está **en alerta** cuando su cantidad disponible es igual o menor que su stock mínimo. Las alertas (`GET /inventory/alerts`) salen ordenadas por lo que falta para llegar al mínimo y se pueden filtrar por `category`.
+- Un producto **agotado** (`GET /products/out-of-stock`) tiene 0 unidades disponibles.
+- No se puede eliminar un producto que tenga donaciones o entregas: responde 409 con el nombre del producto. Su inventario solo se borra junto con el producto.
+
+### Reglas de donaciones
+
+- Cada donación debe tener un donante y un producto que existan (si no, 404) y una cantidad entre 1 y 10.000.
+- La donación se guarda y suma al inventario en una sola transacción: si algo falla, no se guarda nada.
+- Las donaciones **no se eliminan**. Si hubo un error, se **anulan** (`PATCH /donations/:id/cancel`). Solo se anula una donación RECIBIDA; anular una ya anulada responde 400.
+- Los reportes, el resumen por producto (`/donations/summary`), el resumen del donante (`/donors/:id/summary`) y las últimas donaciones (`/donations/recent`) solo cuentan las RECIBIDAS.
+- El filtro por fechas (`from` y `to`) usa la fecha de registro en hora de Colombia e incluye los dos días completos.
+- No se puede eliminar un donante que tenga donaciones: responde 409 con su nombre.
 
 ---
 

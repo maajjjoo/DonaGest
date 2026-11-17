@@ -12,6 +12,7 @@ import {
 } from '../common/helpers/paginate.helper';
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 import { AdjustInventoryDto } from './dto/adjust-inventory.dto';
+import { FilterAlertsDto } from './dto/filter-alerts.dto';
 import { UpdateMinimumStockDto } from './dto/update-minimum-stock.dto';
 import { InventoryAdjustment } from './entities/inventory-adjustment.entity';
 import { Inventory } from './entities/inventory.entity';
@@ -21,6 +22,8 @@ export class InventoryService {
   constructor(
     @InjectRepository(Inventory)
     private readonly inventoryRepository: Repository<Inventory>,
+    @InjectRepository(InventoryAdjustment)
+    private readonly adjustmentRepository: Repository<InventoryAdjustment>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -38,18 +41,38 @@ export class InventoryService {
   }
 
   async findAlerts(
-    query: PaginationQueryDto,
+    query: FilterAlertsDto,
   ): Promise<PaginatedResponse<Inventory>> {
-    const { page, limit } = query;
-    const [data, total] = await this.inventoryRepository
+    const { page, limit, category } = query;
+    const builder = this.inventoryRepository
       .createQueryBuilder('inventory')
       .innerJoinAndSelect('inventory.product', 'product')
-      .where('inventory.availableQuantity <= inventory.minimumStock')
+      .where('inventory.availableQuantity <= inventory.minimumStock');
+    if (category) {
+      builder.andWhere('product.category = :category', { category });
+    }
+
+    const [data, total] = await builder
       .orderBy('inventory.available_quantity - inventory.minimum_stock', 'ASC')
       .addOrderBy('product.name', 'ASC')
       .offset(getSkip(page, limit))
       .limit(limit)
       .getManyAndCount();
+    return buildPaginatedResponse(data, total, page, limit);
+  }
+
+  async findAdjustments(
+    id: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponse<InventoryAdjustment>> {
+    await this.findOne(id);
+    const { page, limit } = query;
+    const [data, total] = await this.adjustmentRepository.findAndCount({
+      where: { inventory: { id } },
+      order: { createdAt: 'DESC' },
+      skip: getSkip(page, limit),
+      take: limit,
+    });
     return buildPaginatedResponse(data, total, page, limit);
   }
 
