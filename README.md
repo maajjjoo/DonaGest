@@ -291,7 +291,7 @@ Todas las rutas usan el prefijo `/api/v1`. Los listados son paginados con `page`
 | Método | Ruta | Descripción | Códigos |
 |---|---|---|---|
 | POST | `/products` | Registrar un producto (crea su inventario en 0) | 201, 400, 409 |
-| GET | `/products` | Listar con `category` y `search` | 200, 400 |
+| GET | `/products` | Listar con `category`, `search` y orden `sort` (`name` o `category`) y `order` (`ASC` o `DESC`) | 200, 400 |
 | GET | `/products/out-of-stock` | Productos con inventario en 0 | 200 |
 | GET | `/products/:id` | Consultar un producto con su inventario | 200, 400, 404 |
 | PUT | `/products/:id` | Reemplazar todos los datos | 200, 400, 404, 409 |

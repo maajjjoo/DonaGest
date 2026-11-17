@@ -18,6 +18,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { FilterProductDto } from './dto/filter-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Product } from './entities/product.entity';
+import { ProductSortField } from './enums/product-sort.enum';
 
 @Injectable()
 export class ProductService {
@@ -37,7 +38,7 @@ export class ProductService {
   }
 
   async findAll(query: FilterProductDto): Promise<PaginatedResponse<Product>> {
-    const { page, limit, category, search } = query;
+    const { page, limit, category, search, sort, order } = query;
     const base: FindOptionsWhere<Product> = category ? { category } : {};
     const pattern = search ? ILike(`%${escapeLike(search)}%`) : undefined;
     const where = pattern
@@ -50,7 +51,10 @@ export class ProductService {
     const [data, total] = await this.productRepository.findAndCount({
       where,
       relations: { inventory: true },
-      order: { name: 'ASC' },
+      order:
+        sort === ProductSortField.CATEGORY
+          ? { category: order, name: 'ASC' }
+          : { name: order },
       skip: getSkip(page, limit),
       take: limit,
     });
