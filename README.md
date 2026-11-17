@@ -396,7 +396,83 @@ El filtro global `TypeOrmExceptionFilter` traduce los errores de PostgreSQL:
 
 ---
 
-## 13. Flujo de Git
+## 13. Reportes
+
+Los reportes ayudan a decidir a dónde enviar la ayuda. Solo cuentan donaciones **RECIBIDAS**; las anuladas no suman.
+
+| Reporte | Qué muestra | Para qué sirve |
+|---|---|---|
+| `GET /reports/summary` | Total de donantes, donaciones recibidas y anuladas, unidades donadas, entregas por estado, zonas activas por prioridad y productos en alerta | Ver el estado general en una sola consulta |
+| `GET /reports/zones/:id` | Entregas de la zona por estado y unidades ya entregadas por producto | Saber qué ha recibido una comunidad |
+| `GET /reports/top-donors` | Los 5 donantes con más unidades donadas | Reconocer y contactar a quienes más aportan |
+| `GET /reports/inventory-by-category` | Productos, unidades disponibles y productos en alerta por categoría (salen todas las categorías, aunque estén en 0) | Ver qué tipo de ayuda hace falta pedir |
+| `GET /reports/zones-without-deliveries` | Zonas activas sin entregas (las canceladas no cuentan), de CRITICA a BAJA y luego por familias afectadas | Saber qué comunidad atender primero |
+
+Con los datos del seed, el resumen general responde:
+
+```json
+{
+  "donors": { "total": 4 },
+  "donations": { "received": 6, "cancelled": 0, "unitsDonated": 2618 },
+  "deliveries": { "PROGRAMADA": 1, "EN_TRANSITO": 0, "ENTREGADA": 1, "CANCELADA": 0, "total": 2 },
+  "activeZonesByPriority": { "BAJA": 0, "MEDIA": 1, "ALTA": 2, "CRITICA": 1, "total": 4 },
+  "productsInAlert": 1,
+  "generatedAt": "2026-11-17T03:15:36.882Z"
+}
+```
+
+Con esos mismos datos:
+
+- **Top de donantes**: el primero es la Distribuidora La Esperanza S.A.S., con 1.450 unidades en 2 donaciones.
+- **Zonas sin entregas**: Quibdó (ALTA) y luego Dosquebradas (MEDIA).
+
+`GET /health` responde `{ "status": "ok", "database": "up", "timestamp": "..." }`. Si PostgreSQL no responde, devuelve **503** con `"status": "error"` y `"database": "down"`.
+
+---
+
+## 14. Pruebas
+
+### Pruebas unitarias
+
+```bash
+npm run test
+npm run test:cov   # con reporte de cobertura en coverage/
+```
+
+Son 72 pruebas en 8 archivos `*.spec.ts`, dentro de `src/`. Usan repositorios y `DataSource` simulados, así que **no necesitan la base de datos**.
+
+| Archivo | Qué prueba |
+|---|---|
+| `affected-zone.service.spec.ts` | Crear, filtrar, ordenar por prioridad, PUT con valores por defecto, cambiar estado y 404 |
+| `donor.service.spec.ts` | 409 por documento o correo repetido, búsqueda, 400 si el documento no coincide con el tipo |
+| `product.service.spec.ts` | Inventario en 0 al crear, 409 por nombre repetido, productos agotados |
+| `inventory.service.spec.ts` | Subir y bajar stock con bloqueo, 409 por stock insuficiente, ajuste con motivo |
+| `donation.service.spec.ts` | Registro que suma al inventario, 404, anulación, 400 si ya estaba anulada, 409 sin stock |
+| `delivery-status-transitions.spec.ts` | Transiciones permitidas y no permitidas del mapa de estados |
+| `delivery.service.spec.ts` | Transiciones válidas, 400 con transición inválida, devolución del stock al cancelar, 409 sin stock, zona inactiva y fecha pasada |
+| `report.service.spec.ts` | Totales del resumen, conteos en 0 cuando no hay datos, resumen por zona, top 5 y categorías |
+
+### Pruebas e2e
+
+```bash
+docker compose up -d
+npm run test:e2e
+```
+
+Las pruebas e2e levantan la aplicación completa con Supertest contra PostgreSQL:
+
+- Usan una base de datos aparte, **`donagest_e2e`**. Se crea sola si no existe y se limpia al inicio de cada corrida, así que no tocan los datos de desarrollo.
+- Prueban `GET /health`.
+- Prueban el flujo **crear producto → registrar donante → donar → consultar inventario → anular → consultar inventario**.
+- Prueban los errores 400, 404 y 409.
+
+### Colección de Postman
+
+La colección `docs/DonaGest.postman_collection.json` tiene 73 requests, cada uno con una prueba del código de respuesta esperado. Con la API arriba, se puede correr completa desde el *Collection Runner* de Postman.
+
+---
+
+## 15. Flujo de Git
 
 - Ramas: `main` ← `develop` ← `feature/*` y `fix/*`.
 - Cada funcionalidad tiene su propia rama `feature/*` que sale de `develop` y vuelve a `develop` con un Pull Request revisado por otro integrante.
@@ -405,7 +481,7 @@ El filtro global `TypeOrmExceptionFilter` traduce los errores de PostgreSQL:
 
 ---
 
-## 14. Integrantes
+## 16. Integrantes
 
 | Integrante | Usuario de GitHub | Responsabilidad |
 |---|---|---|
