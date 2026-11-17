@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -58,5 +59,22 @@ export class DonationController {
   @ApiResponse({ status: 404, description: 'Donación no encontrada' })
   findOne(@Param('id', UuidParamPipe) id: string) {
     return this.donationService.findOne(id);
+  }
+
+  @Patch(':id/cancel')
+  @ApiOperation({
+    summary: 'Anular una donación',
+    description:
+      'Solo se pueden anular donaciones RECIBIDAS. La cantidad se descuenta del inventario en la misma transacción; si ese stock ya se entregó, no se puede anular. Se anula en vez de borrar para conservar el historial.',
+  })
+  @ApiOkResponse({ type: Donation })
+  @ApiResponse({ status: 400, description: 'La donación ya estaba anulada' })
+  @ApiResponse({ status: 404, description: 'Donación no encontrada' })
+  @ApiResponse({
+    status: 409,
+    description: 'Stock insuficiente para descontar la donación',
+  })
+  cancel(@Param('id', UuidParamPipe) id: string) {
+    return this.donationService.cancel(id);
   }
 }

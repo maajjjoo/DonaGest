@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
@@ -12,6 +16,7 @@ import { InventoryService } from '../inventory/inventory.service';
 import { Product } from '../product/entities/product.entity';
 import { CreateDonationDto } from './dto/create-donation.dto';
 import { Donation } from './entities/donation.entity';
+import { DonationStatus } from './enums/donation-status.enum';
 
 @Injectable()
 export class DonationService {
@@ -59,6 +64,34 @@ export class DonationService {
     });
 
     return this.findOne(donationId);
+  }
+
+  async cancel(id: string): Promise<Donation> {
+    await this.dataSource.transaction(async (manager) => {
+      const donation = await manager.findOne(Donation, {
+        where: { id },
+        relations: { product: true },
+        lock: { mode: 'pessimistic_write', tables: ['donations'] },
+      });
+      if (!donation) {
+        throw new NotFoundException(`No se encontró la donación con id ${id}`);
+      }
+      if (donation.status !== DonationStatus.RECIBIDA) {
+        throw new BadRequestException(
+          `Solo se pueden anular donaciones en estado ${DonationStatus.RECIBIDA}; esta donación está ${donation.status}`,
+        );
+      }
+
+      await this.inventoryService.decreaseStock(
+        manager,
+        donation.product.id,
+        donation.quantity,
+      );
+      donation.status = DonationStatus.ANULADA;
+      await manager.save(donation);
+    });
+
+    return this.findOne(id);
   }
 
   async findAll(
