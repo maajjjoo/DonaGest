@@ -381,20 +381,24 @@ Todas las rutas usan el prefijo `/api/v1`. Los listados son paginados con `page`
 | 409 | Dato repetido, registro relacionado con otros datos o stock insuficiente |
 | 503 | La base de datos no responde (`/health`) |
 
-Los errores tienen este formato y los mensajes están en español:
+Todos los errores pasan por el filtro global `AllExceptionsFilter` y tienen el mismo formato. Los mensajes están en español:
 
 ```json
 {
   "statusCode": 409,
   "error": "Conflict",
-  "message": "Stock insuficiente: disponible 180, solicitado 500"
+  "message": "Stock insuficiente: disponible 180, solicitado 500",
+  "path": "/api/v1/deliveries",
+  "timestamp": "2026-11-17T14:00:00.000Z"
 }
 ```
 
-El filtro global `TypeOrmExceptionFilter` traduce los errores de PostgreSQL:
-
-- `23505` → 409 "El registro ya existe".
-- `23503` → 409 "No se puede completar la operación porque el registro está relacionado con otros datos".
+- En los errores de validación, `message` es una lista con todos los problemas encontrados.
+- Los errores de PostgreSQL los traduce `TypeOrmExceptionFilter`:
+  - `23505` → 409 "El registro ya existe".
+  - `23503` → 409 "No se puede completar la operación porque el registro está relacionado con otros datos".
+- Al eliminar un donante que tiene donaciones, el mensaje dice el nombre del donante.
+- Cualquier error inesperado responde 500 sin mostrar detalles internos y queda registrado en la consola.
 
 ---
 

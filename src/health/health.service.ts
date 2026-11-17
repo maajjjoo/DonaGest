@@ -25,6 +25,7 @@ export class HealthService {
         `La base de datos no responde: ${error instanceof Error ? error.message : String(error)}`,
       );
       throw new ServiceUnavailableException({
+        message: 'La base de datos no responde',
         status: 'error',
         database: 'down',
         timestamp: new Date().toISOString(),
