@@ -7,6 +7,7 @@ import {
 } from '@nestjs/swagger';
 import { UuidParamPipe } from '../common/pipes/uuid-param.pipe';
 import { SummaryReportDto } from './dto/summary-report.dto';
+import { DeliveriesByDepartmentDto } from './dto/deliveries-by-department.dto';
 import { InventoryByCategoryDto } from './dto/inventory-by-category.dto';
 import { TopDonorDto } from './dto/top-donor.dto';
 import { ZoneReportDto } from './dto/zone-report.dto';
@@ -59,6 +60,17 @@ export class ReportController {
   @ApiOkResponse({ type: AffectedZone, isArray: true })
   getZonesWithoutDeliveries() {
     return this.reportService.getZonesWithoutDeliveries();
+  }
+
+  @Get('deliveries-by-department')
+  @ApiOperation({
+    summary: 'Entregas por departamento',
+    description:
+      'Total de entregas, pendientes, entregadas, canceladas y unidades entregadas en cada departamento, de mayor a menor número de unidades.',
+  })
+  @ApiOkResponse({ type: DeliveriesByDepartmentDto, isArray: true })
+  getDeliveriesByDepartment() {
+    return this.reportService.getDeliveriesByDepartment();
   }
 
   @Get('zones/:id')
