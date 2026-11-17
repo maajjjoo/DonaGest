@@ -1,7 +1,7 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { QueryFailedError, Repository } from 'typeorm';
 import { Inventory } from '../inventory/entities/inventory.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { Product } from './entities/product.entity';
@@ -174,6 +174,27 @@ describe('ProductService', () => {
       await service.remove(product.id);
 
       expect(repository.remove).toHaveBeenCalledWith(product);
+    });
+
+    it('lanza 409 con mensaje claro si el producto tiene donaciones o entregas', async () => {
+      repository.findOne?.mockResolvedValue(buildProduct());
+      repository.remove?.mockRejectedValue(
+        new QueryFailedError(
+          'DELETE FROM products',
+          [],
+          Object.assign(new Error('violates foreign key constraint'), {
+            code: '23503',
+          }),
+        ),
+      );
+
+      await expect(
+        service.remove('7995f153-f381-45e8-8b23-fedf0d0712fe'),
+      ).rejects.toThrow(
+        new ConflictException(
+          'No se puede eliminar "Agua potable en bolsa 6 L" porque tiene donaciones o entregas registradas',
+        ),
+      );
     });
   });
 });
