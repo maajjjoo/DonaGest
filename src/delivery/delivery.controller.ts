@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -20,6 +21,7 @@ import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { UuidParamPipe } from '../common/pipes/uuid-param.pipe';
 import { DeliveryService } from './delivery.service';
 import { CreateDeliveryDto } from './dto/create-delivery.dto';
+import { UpdateDeliveryStatusDto } from './dto/update-delivery-status.dto';
 import { Delivery } from './entities/delivery.entity';
 
 @ApiTags('Entregas')
@@ -59,5 +61,24 @@ export class DeliveryController {
   @ApiResponse({ status: 404, description: 'Entrega no encontrada' })
   findOne(@Param('id', UuidParamPipe) id: string) {
     return this.deliveryService.findOne(id);
+  }
+
+  @Patch(':id/status')
+  @ApiOperation({
+    summary: 'Cambiar el estado de una entrega',
+    description:
+      'PROGRAMADA → EN_TRANSITO o CANCELADA; EN_TRANSITO → ENTREGADA o CANCELADA. Al marcar ENTREGADA se guarda la fecha de entrega. Al CANCELAR la cantidad vuelve al inventario en la misma transacción.',
+  })
+  @ApiOkResponse({ type: Delivery })
+  @ApiResponse({
+    status: 400,
+    description: 'Transición de estado no permitida',
+  })
+  @ApiResponse({ status: 404, description: 'Entrega no encontrada' })
+  updateStatus(
+    @Param('id', UuidParamPipe) id: string,
+    @Body() dto: UpdateDeliveryStatusDto,
+  ) {
+    return this.deliveryService.updateStatus(id, dto);
   }
 }

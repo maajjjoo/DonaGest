@@ -15,8 +15,14 @@ import {
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 import { InventoryService } from '../inventory/inventory.service';
 import { Product } from '../product/entities/product.entity';
+import {
+  canTransition,
+  DELIVERY_STATUS_TRANSITIONS,
+} from './constants/delivery-status-transitions';
 import { CreateDeliveryDto } from './dto/create-delivery.dto';
+import { UpdateDeliveryStatusDto } from './dto/update-delivery-status.dto';
 import { Delivery } from './entities/delivery.entity';
+import { DeliveryStatus } from './enums/delivery-status.enum';
 
 @Injectable()
 export class DeliveryService {
@@ -77,6 +83,49 @@ export class DeliveryService {
     });
 
     return this.findOne(deliveryId);
+  }
+
+  async updateStatus(
+    id: string,
+    dto: UpdateDeliveryStatusDto,
+  ): Promise<Delivery> {
+    await this.dataSource.transaction(async (manager) => {
+      const delivery = await manager.findOne(Delivery, {
+        where: { id },
+        relations: { product: true },
+        lock: { mode: 'pessimistic_write', tables: ['deliveries'] },
+      });
+      if (!delivery) {
+        throw new NotFoundException(`No se encontró la entrega con id ${id}`);
+      }
+
+      if (!canTransition(delivery.status, dto.status)) {
+        const allowed = DELIVERY_STATUS_TRANSITIONS[delivery.status];
+        throw new BadRequestException(
+          allowed.length
+            ? `No se puede pasar de ${delivery.status} a ${dto.status}. Desde ${delivery.status} solo se permite: ${allowed.join(', ')}`
+            : `La entrega ya está ${delivery.status} y no puede cambiar de estado`,
+        );
+      }
+
+      if (dto.status === DeliveryStatus.CANCELADA) {
+        await this.inventoryService.increaseStock(
+          manager,
+          delivery.product.id,
+          delivery.quantity,
+        );
+      }
+      if (dto.status === DeliveryStatus.ENTREGADA) {
+        delivery.deliveredAt = new Date();
+      }
+      if (dto.notes !== undefined) {
+        delivery.notes = dto.notes;
+      }
+      delivery.status = dto.status;
+      await manager.save(delivery);
+    });
+
+    return this.findOne(id);
   }
 
   async findAll(
