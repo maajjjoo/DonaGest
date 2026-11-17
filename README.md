@@ -305,6 +305,7 @@ Todas las rutas usan el prefijo `/api/v1`. Los listados son paginados con `page`
 | GET | `/inventory` | Inventario de todos los productos | 200 |
 | GET | `/inventory/alerts` | Productos en el stock mínimo o por debajo | 200 |
 | GET | `/inventory/product/:productId` | Inventario de un producto | 200, 400, 404 |
+| GET | `/inventory/:id/adjustments` | Historial de ajustes manuales | 200, 400, 404 |
 | PATCH | `/inventory/:id/minimum-stock` | Cambiar el stock mínimo | 200, 400, 404 |
 | PATCH | `/inventory/:id/adjust` | Ajuste manual con motivo obligatorio | 200, 400, 404, 409 |
 
