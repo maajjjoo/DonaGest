@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
 import {
   ApiOkResponse,
   ApiOperation,
@@ -8,6 +8,7 @@ import {
 import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { UuidParamPipe } from '../common/pipes/uuid-param.pipe';
+import { UpdateMinimumStockDto } from './dto/update-minimum-stock.dto';
 import { Inventory } from './entities/inventory.entity';
 import { InventoryService } from './inventory.service';
 
@@ -25,6 +26,17 @@ export class InventoryController {
     return this.inventoryService.findAll(query);
   }
 
+  @Get('alerts')
+  @ApiOperation({
+    summary: 'Listar productos con stock en el mínimo o por debajo',
+    description:
+      'Aparecen primero los productos a los que más les falta para llegar a su stock mínimo.',
+  })
+  @ApiPaginatedResponse(Inventory)
+  findAlerts(@Query() query: PaginationQueryDto) {
+    return this.inventoryService.findAlerts(query);
+  }
+
   @Get('product/:productId')
   @ApiOperation({ summary: 'Consultar el inventario de un producto' })
   @ApiOkResponse({ type: Inventory })
@@ -35,5 +47,17 @@ export class InventoryController {
   })
   findByProduct(@Param('productId', UuidParamPipe) productId: string) {
     return this.inventoryService.findByProduct(productId);
+  }
+
+  @Patch(':id/minimum-stock')
+  @ApiOperation({ summary: 'Cambiar el stock mínimo de un inventario' })
+  @ApiOkResponse({ type: Inventory })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 404, description: 'Inventario no encontrado' })
+  updateMinimumStock(
+    @Param('id', UuidParamPipe) id: string,
+    @Body() dto: UpdateMinimumStockDto,
+  ) {
+    return this.inventoryService.updateMinimumStock(id, dto);
   }
 }

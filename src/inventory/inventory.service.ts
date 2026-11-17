@@ -7,6 +7,7 @@ import {
   getSkip,
 } from '../common/helpers/paginate.helper';
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
+import { UpdateMinimumStockDto } from './dto/update-minimum-stock.dto';
 import { Inventory } from './entities/inventory.entity';
 
 @Injectable()
@@ -27,6 +28,31 @@ export class InventoryService {
       take: limit,
     });
     return buildPaginatedResponse(data, total, page, limit);
+  }
+
+  async findAlerts(
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponse<Inventory>> {
+    const { page, limit } = query;
+    const [data, total] = await this.inventoryRepository
+      .createQueryBuilder('inventory')
+      .innerJoinAndSelect('inventory.product', 'product')
+      .where('inventory.availableQuantity <= inventory.minimumStock')
+      .orderBy('inventory.available_quantity - inventory.minimum_stock', 'ASC')
+      .addOrderBy('product.name', 'ASC')
+      .offset(getSkip(page, limit))
+      .limit(limit)
+      .getManyAndCount();
+    return buildPaginatedResponse(data, total, page, limit);
+  }
+
+  async updateMinimumStock(
+    id: string,
+    dto: UpdateMinimumStockDto,
+  ): Promise<Inventory> {
+    const inventory = await this.findOne(id);
+    inventory.minimumStock = dto.minimumStock;
+    return this.inventoryRepository.save(inventory);
   }
 
   async findOne(id: string): Promise<Inventory> {
