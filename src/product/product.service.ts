@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, ILike, Repository } from 'typeorm';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { isForeignKeyViolation } from '../common/helpers/database-error.helper';
 import { escapeLike } from '../common/helpers/escape-like.helper';
 import {
   buildPaginatedResponse,
@@ -100,7 +101,16 @@ export class ProductService {
 
   async remove(id: string): Promise<void> {
     const product = await this.findOne(id);
-    await this.productRepository.remove(product);
+    try {
+      await this.productRepository.remove(product);
+    } catch (error) {
+      if (isForeignKeyViolation(error)) {
+        throw new ConflictException(
+          `No se puede eliminar "${product.name}" porque tiene donaciones o entregas registradas`,
+        );
+      }
+      throw error;
+    }
   }
 
   private async ensureUniqueName(name: string, excludeId?: string) {
