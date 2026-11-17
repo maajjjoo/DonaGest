@@ -4,9 +4,11 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Max,
   MaxLength,
   Min,
 } from 'class-validator';
+import { MAX_DONATION_QUANTITY } from '../constants/donation.constants';
 
 export class CreateDonationDto {
   @ApiProperty({
@@ -23,9 +25,16 @@ export class CreateDonationDto {
   @IsUUID('all', { message: 'productId debe ser un UUID válido' })
   productId: string;
 
-  @ApiProperty({ description: 'Cantidad donada', example: 200 })
+  @ApiProperty({
+    description: `Cantidad donada (máximo ${MAX_DONATION_QUANTITY} por donación)`,
+    example: 200,
+    maximum: MAX_DONATION_QUANTITY,
+  })
   @IsInt({ message: 'La cantidad debe ser un número entero' })
   @Min(1, { message: 'La cantidad debe ser al menos 1' })
+  @Max(MAX_DONATION_QUANTITY, {
+    message: `La cantidad máxima por donación es ${MAX_DONATION_QUANTITY}; si es más, registre varias donaciones`,
+  })
   quantity: number;
 
   @ApiPropertyOptional({
