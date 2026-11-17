@@ -1,6 +1,13 @@
-import { Controller, Get } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Param } from '@nestjs/common';
+import {
+  ApiOkResponse,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import { UuidParamPipe } from '../common/pipes/uuid-param.pipe';
 import { SummaryReportDto } from './dto/summary-report.dto';
+import { ZoneReportDto } from './dto/zone-report.dto';
 import { ReportService } from './report.service';
 
 @ApiTags('Reportes')
@@ -17,5 +24,18 @@ export class ReportController {
   @ApiOkResponse({ type: SummaryReportDto })
   getSummary() {
     return this.reportService.getSummary();
+  }
+
+  @Get('zones/:id')
+  @ApiOperation({
+    summary: 'Resumen de una zona afectada',
+    description:
+      'Entregas de la zona por estado y unidades ya entregadas por producto.',
+  })
+  @ApiOkResponse({ type: ZoneReportDto })
+  @ApiResponse({ status: 400, description: 'El id no es un UUID válido' })
+  @ApiResponse({ status: 404, description: 'Zona no encontrada' })
+  getZoneReport(@Param('id', UuidParamPipe) id: string) {
+    return this.reportService.getZoneReport(id);
   }
 }

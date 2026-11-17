@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { AffectedZoneService } from '../affected-zone/affected-zone.service';
 import { AffectedZone } from '../affected-zone/entities/affected-zone.entity';
 import { ZonePriority } from '../affected-zone/enums/zone-priority.enum';
 import { Delivery } from '../delivery/entities/delivery.entity';
@@ -9,11 +10,13 @@ import { Donation } from '../donation/entities/donation.entity';
 import { DonationStatus } from '../donation/enums/donation-status.enum';
 import { Donor } from '../donor/entities/donor.entity';
 import { Inventory } from '../inventory/entities/inventory.entity';
+import { ProductUnit } from '../product/enums/product-unit.enum';
 import {
   DeliveriesByStatusDto,
   SummaryReportDto,
   ZonesByPriorityDto,
 } from './dto/summary-report.dto';
+import { ZoneReportDto } from './dto/zone-report.dto';
 
 interface CountRow {
   key: string;
@@ -51,6 +54,7 @@ export class ReportService {
     private readonly zoneRepository: Repository<AffectedZone>,
     @InjectRepository(Inventory)
     private readonly inventoryRepository: Repository<Inventory>,
+    private readonly affectedZoneService: AffectedZoneService,
   ) {}
 
   async getSummary(): Promise<SummaryReportDto> {
@@ -111,6 +115,57 @@ export class ReportService {
       ) as unknown as ZonesByPriorityDto,
       productsInAlert,
       generatedAt: new Date(),
+    };
+  }
+
+  async getZoneReport(zoneId: string): Promise<ZoneReportDto> {
+    const zone = await this.affectedZoneService.findOne(zoneId);
+
+    const [statusRows, productRows] = await Promise.all([
+      this.deliveryRepository
+        .createQueryBuilder('delivery')
+        .select('delivery.status', 'key')
+        .addSelect('COUNT(delivery.id)', 'count')
+        .where('delivery.affected_zone_id = :zoneId', { zoneId })
+        .groupBy('delivery.status')
+        .getRawMany<CountRow>(),
+      this.deliveryRepository
+        .createQueryBuilder('delivery')
+        .innerJoin('delivery.product', 'product')
+        .select('product.id', 'productId')
+        .addSelect('product.name', 'productName')
+        .addSelect('product.unit', 'unit')
+        .addSelect('SUM(delivery.quantity)', 'unitsDelivered')
+        .where('delivery.affected_zone_id = :zoneId', { zoneId })
+        .andWhere('delivery.status = :status', {
+          status: DeliveryStatus.ENTREGADA,
+        })
+        .groupBy('product.id')
+        .orderBy('"unitsDelivered"', 'DESC')
+        .getRawMany<{
+          productId: string;
+          productName: string;
+          unit: ProductUnit;
+          unitsDelivered: string;
+        }>(),
+    ]);
+
+    const deliveredProducts = productRows.map((row) => ({
+      ...row,
+      unitsDelivered: Number(row.unitsDelivered),
+    }));
+
+    return {
+      zone,
+      deliveriesByStatus: toCountMap(
+        Object.values(DeliveryStatus),
+        statusRows,
+      ) as unknown as DeliveriesByStatusDto,
+      deliveredProducts,
+      totalUnitsDelivered: deliveredProducts.reduce(
+        (sum, item) => sum + item.unitsDelivered,
+        0,
+      ),
     };
   }
 }
