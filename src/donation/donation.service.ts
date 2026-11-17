@@ -10,6 +10,8 @@ import {
   getSkip,
 } from '../common/helpers/paginate.helper';
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { DonorService } from '../donor/donor.service';
 import { Donor } from '../donor/entities/donor.entity';
 import { InventoryService } from '../inventory/inventory.service';
 import { Product } from '../product/entities/product.entity';
@@ -25,6 +27,7 @@ export class DonationService {
     @InjectRepository(Donation)
     private readonly donationRepository: Repository<Donation>,
     private readonly inventoryService: InventoryService,
+    private readonly donorService: DonorService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -112,6 +115,14 @@ export class DonationService {
       take: limit,
     });
     return buildPaginatedResponse(data, total, page, limit);
+  }
+
+  async findByDonor(
+    donorId: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponse<Donation>> {
+    await this.donorService.findOne(donorId);
+    return this.findAll({ page: query.page, limit: query.limit, donorId });
   }
 
   async getSummary(): Promise<DonationSummaryItemDto[]> {
