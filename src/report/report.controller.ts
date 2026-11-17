@@ -7,6 +7,7 @@ import {
 } from '@nestjs/swagger';
 import { UuidParamPipe } from '../common/pipes/uuid-param.pipe';
 import { SummaryReportDto } from './dto/summary-report.dto';
+import { TopDonorDto } from './dto/top-donor.dto';
 import { ZoneReportDto } from './dto/zone-report.dto';
 import { ReportService } from './report.service';
 
@@ -24,6 +25,16 @@ export class ReportController {
   @ApiOkResponse({ type: SummaryReportDto })
   getSummary() {
     return this.reportService.getSummary();
+  }
+
+  @Get('top-donors')
+  @ApiOperation({
+    summary: 'Los 5 donantes con más unidades donadas',
+    description: 'Solo cuenta donaciones RECIBIDAS (no las anuladas).',
+  })
+  @ApiOkResponse({ type: TopDonorDto, isArray: true })
+  getTopDonors() {
+    return this.reportService.getTopDonors();
   }
 
   @Get('zones/:id')

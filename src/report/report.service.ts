@@ -9,6 +9,7 @@ import { DeliveryStatus } from '../delivery/enums/delivery-status.enum';
 import { Donation } from '../donation/entities/donation.entity';
 import { DonationStatus } from '../donation/enums/donation-status.enum';
 import { Donor } from '../donor/entities/donor.entity';
+import { DonorType } from '../donor/enums/donor-type.enum';
 import { Inventory } from '../inventory/entities/inventory.entity';
 import { ProductUnit } from '../product/enums/product-unit.enum';
 import {
@@ -16,7 +17,10 @@ import {
   SummaryReportDto,
   ZonesByPriorityDto,
 } from './dto/summary-report.dto';
+import { TopDonorDto } from './dto/top-donor.dto';
 import { ZoneReportDto } from './dto/zone-report.dto';
+
+const TOP_DONORS_LIMIT = 5;
 
 interface CountRow {
   key: string;
@@ -167,5 +171,36 @@ export class ReportService {
         0,
       ),
     };
+  }
+
+  async getTopDonors(): Promise<TopDonorDto[]> {
+    const rows = await this.donationRepository
+      .createQueryBuilder('donation')
+      .innerJoin('donation.donor', 'donor')
+      .select('donor.id', 'donorId')
+      .addSelect('donor.fullName', 'fullName')
+      .addSelect('donor.donorType', 'donorType')
+      .addSelect('donor.city', 'city')
+      .addSelect('SUM(donation.quantity)', 'unitsDonated')
+      .addSelect('COUNT(donation.id)', 'donationsCount')
+      .where('donation.status = :status', { status: DonationStatus.RECIBIDA })
+      .groupBy('donor.id')
+      .orderBy('"unitsDonated"', 'DESC')
+      .addOrderBy('donor.fullName', 'ASC')
+      .limit(TOP_DONORS_LIMIT)
+      .getRawMany<{
+        donorId: string;
+        fullName: string;
+        donorType: DonorType;
+        city: string;
+        unitsDonated: string;
+        donationsCount: string;
+      }>();
+
+    return rows.map((row) => ({
+      ...row,
+      unitsDonated: Number(row.unitsDonated),
+      donationsCount: Number(row.donationsCount),
+    }));
   }
 }
