@@ -7,15 +7,16 @@
   "license": "MIT",
   "scripts": {
     "build": "nest build",
-    "format": "prettier --write \"src/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main",
-    "lint": "oxlint --deny-warnings src/",
+    "lint": "oxlint --deny-warnings src/ test/",
     "test": "node --experimental-vm-modules --no-warnings=ExperimentalWarning node_modules/jest/bin/jest.js",
     "test:cov": "node --experimental-vm-modules --no-warnings=ExperimentalWarning node_modules/jest/bin/jest.js --coverage",
-    "seed": "ts-node -r tsconfig-paths/register src/database/seeds/seed.ts"
+    "seed": "ts-node -r tsconfig-paths/register src/database/seeds/seed.ts",
+    "test:e2e": "node --experimental-vm-modules --no-warnings=ExperimentalWarning node_modules/jest/bin/jest.js --config ./test/jest-e2e.json --runInBand"
   },
   "dependencies": {
     "@nestjs/common": "^12.5.1",
@@ -38,9 +39,12 @@
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.0.0",
+    "@types/pg": "^8.23.1",
+    "@types/supertest": "^7.2.1",
     "jest": "^30.5.2",
     "oxlint": "^1.94.0",
     "prettier": "^3.10.1",
+    "supertest": "^7.3.2",
     "ts-jest": "^29.4.15",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
