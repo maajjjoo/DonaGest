@@ -284,6 +284,7 @@ Todas las rutas usan el prefijo `/api/v1`. Los listados son paginados con `page`
 | PATCH | `/donors/:id` | Actualizar algunos datos | 200, 400, 404, 409 |
 | DELETE | `/donors/:id` | Eliminar (si no tiene donaciones) | 204, 404, 409 |
 | GET | `/donors/:id/donations` | Historial de donaciones | 200, 400, 404 |
+| GET | `/donors/:id/summary` | Donaciones y unidades donadas por el donante | 200, 400, 404 |
 
 ### Productos
 
