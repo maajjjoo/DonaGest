@@ -7,7 +7,7 @@ import { DonorModule } from './donor/donor.module';
 import { ProductModule } from './product/product.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { DonationModule } from './donation/donation.module';
-import { DeliveryController } from './delivery/delivery.controller';
+import { DeliveryModule } from './delivery/delivery.module';
 
 @Module({
   imports: [
@@ -21,7 +21,7 @@ import { DeliveryController } from './delivery/delivery.controller';
     ProductModule,
     InventoryModule,
     DonationModule,
+    DeliveryModule,
   ],
-  controllers: [DeliveryController],
 })
 export class AppModule {}

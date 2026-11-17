@@ -1,107 +1,63 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Post,
-  Put,
+  Query,
 } from '@nestjs/common';
+import {
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { UuidParamPipe } from '../common/pipes/uuid-param.pipe';
+import { DeliveryService } from './delivery.service';
+import { CreateDeliveryDto } from './dto/create-delivery.dto';
+import { Delivery } from './entities/delivery.entity';
 
-interface Delivery {
-  id: number;
-  productId: number;
-  affectedZoneId: number;
-  quantity: number;
-  deliveryDate: string;
-  status: string;
-}
-
+@ApiTags('Entregas')
 @Controller('deliveries')
 export class DeliveryController {
-  private deliveries: Delivery[] = [];
+  constructor(private readonly deliveryService: DeliveryService) {}
 
-  @Get()
-  getAllDeliveries() {
-    return this.deliveries;
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Programar una entrega a una zona afectada',
+    description:
+      'La zona debe existir y estar activa. La cantidad se descuenta del inventario en la misma transacción en que se guarda la entrega.',
+  })
+  @ApiCreatedResponse({ description: 'Entrega programada', type: Delivery })
+  @ApiResponse({
+    status: 400,
+    description: 'Datos inválidos o la zona está inactiva',
+  })
+  @ApiResponse({ status: 404, description: 'No existe la zona o el producto' })
+  @ApiResponse({ status: 409, description: 'Stock insuficiente' })
+  create(@Body() dto: CreateDeliveryDto) {
+    return this.deliveryService.create(dto);
   }
 
-  @Get('pending')
-  getPendingDeliveries() {
-    const pendingDeliveries = this.deliveries.filter(
-      (delivery) => delivery.status === 'pending',
-    );
-
-    return {
-      msg: 'Entregas pendientes',
-      data: pendingDeliveries,
-    };
+  @Get()
+  @ApiOperation({ summary: 'Listar entregas ordenadas por fecha programada' })
+  @ApiPaginatedResponse(Delivery)
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.deliveryService.findAll(query);
   }
 
   @Get(':id')
-  getDeliveryById(@Param('id') id: number) {
-    const delivery = this.deliveries.find(
-      (delivery) => delivery.id === Number(id),
-    );
-
-    if (delivery) {
-      return {
-        msg: `Entrega con id ${id} encontrada`,
-        data: delivery,
-      };
-    } else {
-      return {
-        msg: `Entrega con id ${id} no encontrada`,
-      };
-    }
-  }
-
-  @Post()
-  createDelivery(@Body() delivery: Delivery) {
-    this.deliveries.push(delivery);
-    return {
-      msg: 'Entrega creada exitosamente',
-      data: delivery,
-    };
-  }
-
-  @Put(':id')
-  updateDelivery(@Param('id') id: number, @Body() updatedDelivery: Delivery) {
-    const deliveryIndex = this.deliveries.findIndex(
-      (delivery) => delivery.id === Number(id),
-    );
-
-    if (deliveryIndex === -1) {
-      return {
-        msg: `Entrega con id ${id} no encontrada`,
-      };
-    }
-
-    this.deliveries[deliveryIndex] = {
-      ...this.deliveries[deliveryIndex],
-      ...updatedDelivery,
-    };
-    return {
-      msg: `Entrega con id ${id} actualizada exitosamente`,
-      data: this.deliveries[deliveryIndex],
-    };
-  }
-
-  @Delete(':id')
-  deleteDelivery(@Param('id') id: number) {
-    const deliveryIndex = this.deliveries.findIndex(
-      (delivery) => delivery.id === Number(id),
-    );
-
-    if (deliveryIndex === -1) {
-      return {
-        msg: `Entrega con id ${id} no encontrada`,
-      };
-    }
-
-    this.deliveries.splice(deliveryIndex, 1);
-    return {
-      msg: `Entrega con id ${id} eliminada exitosamente`,
-    };
+  @ApiOperation({ summary: 'Consultar una entrega por su id' })
+  @ApiOkResponse({ type: Delivery })
+  @ApiResponse({ status: 400, description: 'El id no es un UUID válido' })
+  @ApiResponse({ status: 404, description: 'Entrega no encontrada' })
+  findOne(@Param('id', UuidParamPipe) id: string) {
+    return this.deliveryService.findOne(id);
   }
 }
