@@ -17,10 +17,10 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
-import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { UuidParamPipe } from '../common/pipes/uuid-param.pipe';
 import { DeliveryService } from './delivery.service';
 import { CreateDeliveryDto } from './dto/create-delivery.dto';
+import { FilterDeliveryDto } from './dto/filter-delivery.dto';
 import { UpdateDeliveryStatusDto } from './dto/update-delivery-status.dto';
 import { Delivery } from './entities/delivery.entity';
 
@@ -48,9 +48,13 @@ export class DeliveryController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Listar entregas ordenadas por fecha programada' })
+  @ApiOperation({
+    summary:
+      'Listar entregas con filtros por zona, producto, estado y rango de fechas',
+  })
+  @ApiResponse({ status: 400, description: 'Filtros inválidos' })
   @ApiPaginatedResponse(Delivery)
-  findAll(@Query() query: PaginationQueryDto) {
+  findAll(@Query() query: FilterDeliveryDto) {
     return this.deliveryService.findAll(query);
   }
 

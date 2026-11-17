@@ -4,9 +4,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import {
+  Between,
+  DataSource,
+  FindOptionsWhere,
+  LessThanOrEqual,
+  MoreThanOrEqual,
+  Repository,
+} from 'typeorm';
 import { AffectedZone } from '../affected-zone/entities/affected-zone.entity';
-import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { getTodayInColombia } from '../common/helpers/date.helper';
 import {
   buildPaginatedResponse,
@@ -20,6 +26,7 @@ import {
   DELIVERY_STATUS_TRANSITIONS,
 } from './constants/delivery-status-transitions';
 import { CreateDeliveryDto } from './dto/create-delivery.dto';
+import { FilterDeliveryDto } from './dto/filter-delivery.dto';
 import { UpdateDeliveryStatusDto } from './dto/update-delivery-status.dto';
 import { Delivery } from './entities/delivery.entity';
 import { DeliveryStatus } from './enums/delivery-status.enum';
@@ -129,10 +136,25 @@ export class DeliveryService {
   }
 
   async findAll(
-    query: PaginationQueryDto,
+    query: FilterDeliveryDto,
   ): Promise<PaginatedResponse<Delivery>> {
-    const { page, limit } = query;
+    const { page, limit, affectedZoneId, productId, status, from, to } = query;
+    if (from && to && from > to) {
+      throw new BadRequestException(
+        'La fecha inicial (from) no puede ser mayor que la final (to)',
+      );
+    }
+
+    const where: FindOptionsWhere<Delivery> = {};
+    if (affectedZoneId) where.affectedZone = { id: affectedZoneId };
+    if (productId) where.product = { id: productId };
+    if (status) where.status = status;
+    if (from && to) where.scheduledDate = Between(from, to);
+    else if (from) where.scheduledDate = MoreThanOrEqual(from);
+    else if (to) where.scheduledDate = LessThanOrEqual(to);
+
     const [data, total] = await this.deliveryRepository.findAndCount({
+      where,
       relations: { affectedZone: true, product: true },
       order: { scheduledDate: 'ASC', createdAt: 'DESC' },
       skip: getSkip(page, limit),
