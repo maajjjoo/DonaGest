@@ -1,0 +1,6 @@
+export enum DeliveryStatus {
+  PROGRAMADA = 'PROGRAMADA',
+  EN_TRANSITO = 'EN_TRANSITO',
+  ENTREGADA = 'ENTREGADA',
+  CANCELADA = 'CANCELADA',
+}
