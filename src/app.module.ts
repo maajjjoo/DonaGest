@@ -4,8 +4,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { databaseConfig } from './config/database.config';
 import { AffectedZoneModule } from './affected-zone/affected-zone.module';
 import { DonorModule } from './donor/donor.module';
+import { ProductModule } from './product/product.module';
 import { DonationController } from './donation/donation.controller';
-import { ProductController } from './product/product.controller';
 import { InventoryController } from './inventory/inventory.controller';
 import { DeliveryController } from './delivery/delivery.controller';
 
@@ -18,12 +18,8 @@ import { DeliveryController } from './delivery/delivery.controller';
     }),
     AffectedZoneModule,
     DonorModule,
+    ProductModule,
   ],
-  controllers: [
-    DonationController,
-    ProductController,
-    InventoryController,
-    DeliveryController,
-  ],
+  controllers: [DonationController, InventoryController, DeliveryController],
 })
 export class AppModule {}
