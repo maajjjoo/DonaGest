@@ -1,94 +1,94 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
+  Patch,
   Post,
-  Put,
+  Query,
 } from '@nestjs/common';
+import {
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
+import { UuidParamPipe } from '../common/pipes/uuid-param.pipe';
+import { DonationService } from './donation.service';
+import { CreateDonationDto } from './dto/create-donation.dto';
+import { DonationSummaryItemDto } from './dto/donation-summary.dto';
+import { FilterDonationDto } from './dto/filter-donation.dto';
+import { Donation } from './entities/donation.entity';
 
-interface Donation {
-  id: number;
-  donorId: number;
-  productId: number;
-  quantity: number;
-  donationDate: string;
-}
-
+@ApiTags('Donaciones')
 @Controller('donations')
 export class DonationController {
-  private donations: Donation[] = [];
+  constructor(private readonly donationService: DonationService) {}
+
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Registrar una donación',
+    description:
+      'Guarda la donación y suma la cantidad al inventario del producto en la misma transacción. Las donaciones no se eliminan para no perder el historial; si hubo un error se deben anular.',
+  })
+  @ApiCreatedResponse({ description: 'Donación registrada', type: Donation })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({
+    status: 404,
+    description: 'No existe el donante o el producto',
+  })
+  create(@Body() dto: CreateDonationDto) {
+    return this.donationService.create(dto);
+  }
 
   @Get()
-  getAllDonations() {
-    return this.donations;
+  @ApiOperation({
+    summary:
+      'Listar donaciones con filtros por donante, producto y estado, las más recientes primero',
+  })
+  @ApiPaginatedResponse(Donation)
+  findAll(@Query() query: FilterDonationDto) {
+    return this.donationService.findAll(query);
+  }
+
+  @Get('summary')
+  @ApiOperation({
+    summary: 'Total donado agrupado por producto',
+    description: 'Solo cuenta las donaciones RECIBIDAS (no las anuladas).',
+  })
+  @ApiOkResponse({ type: DonationSummaryItemDto, isArray: true })
+  getSummary() {
+    return this.donationService.getSummary();
   }
 
   @Get(':id')
-  getDonationById(@Param('id') id: number) {
-    const donation = this.donations.find(
-      (donation) => donation.id === Number(id),
-    );
-
-    if (donation) {
-      return {
-        msg: `Donación con id ${id} encontrada`,
-        data: donation,
-      };
-    } else {
-      return {
-        msg: `Donación con id ${id} no encontrada`,
-      };
-    }
+  @ApiOperation({ summary: 'Consultar una donación por su id' })
+  @ApiOkResponse({ type: Donation })
+  @ApiResponse({ status: 400, description: 'El id no es un UUID válido' })
+  @ApiResponse({ status: 404, description: 'Donación no encontrada' })
+  findOne(@Param('id', UuidParamPipe) id: string) {
+    return this.donationService.findOne(id);
   }
 
-  @Post()
-  createDonation(@Body() donation: Donation) {
-    this.donations.push(donation);
-    return {
-      msg: 'Donación creada exitosamente',
-      data: donation,
-    };
-  }
-
-  @Put(':id')
-  updateDonation(@Param('id') id: number, @Body() updatedDonation: Donation) {
-    const donationIndex = this.donations.findIndex(
-      (donation) => donation.id === Number(id),
-    );
-
-    if (donationIndex === -1) {
-      return {
-        msg: `Donación con id ${id} no encontrada`,
-      };
-    }
-
-    this.donations[donationIndex] = {
-      ...this.donations[donationIndex],
-      ...updatedDonation,
-    };
-    return {
-      msg: `Donación con id ${id} actualizada exitosamente`,
-      data: this.donations[donationIndex],
-    };
-  }
-
-  @Delete(':id')
-  deleteDonation(@Param('id') id: number) {
-    const donationIndex = this.donations.findIndex(
-      (donation) => donation.id === Number(id),
-    );
-
-    if (donationIndex === -1) {
-      return {
-        msg: `Donación con id ${id} no encontrada`,
-      };
-    }
-
-    this.donations.splice(donationIndex, 1);
-    return {
-      msg: `Donación con id ${id} eliminada exitosamente`,
-    };
+  @Patch(':id/cancel')
+  @ApiOperation({
+    summary: 'Anular una donación',
+    description:
+      'Solo se pueden anular donaciones RECIBIDAS. La cantidad se descuenta del inventario en la misma transacción; si ese stock ya se entregó, no se puede anular. Se anula en vez de borrar para conservar el historial.',
+  })
+  @ApiOkResponse({ type: Donation })
+  @ApiResponse({ status: 400, description: 'La donación ya estaba anulada' })
+  @ApiResponse({ status: 404, description: 'Donación no encontrada' })
+  @ApiResponse({
+    status: 409,
+    description: 'Stock insuficiente para descontar la donación',
+  })
+  cancel(@Param('id', UuidParamPipe) id: string) {
+    return this.donationService.cancel(id);
   }
 }
