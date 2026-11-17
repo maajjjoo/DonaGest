@@ -57,6 +57,16 @@ export class DonationController {
     return this.donationService.findAll(query);
   }
 
+  @Get('recent')
+  @ApiOperation({
+    summary: 'Últimas 10 donaciones recibidas',
+    description: 'No incluye las donaciones anuladas.',
+  })
+  @ApiOkResponse({ type: Donation, isArray: true })
+  findRecent() {
+    return this.donationService.findRecent();
+  }
+
   @Get('summary')
   @ApiOperation({
     summary: 'Total donado agrupado por producto',

@@ -26,6 +26,7 @@ import { DonorService } from '../donor/donor.service';
 import { Donor } from '../donor/entities/donor.entity';
 import { InventoryService } from '../inventory/inventory.service';
 import { Product } from '../product/entities/product.entity';
+import { RECENT_DONATIONS_LIMIT } from './constants/donation.constants';
 import { CreateDonationDto } from './dto/create-donation.dto';
 import { DonationSummaryItemDto } from './dto/donation-summary.dto';
 import { DonorSummaryDto } from './dto/donor-summary.dto';
@@ -230,6 +231,15 @@ export class DonationService {
       totalQuantity: Number(row.totalQuantity),
       donationsCount: Number(row.donationsCount),
     }));
+  }
+
+  async findRecent(): Promise<Donation[]> {
+    return this.donationRepository.find({
+      where: { status: DonationStatus.RECIBIDA },
+      relations: { donor: true, product: true },
+      order: { createdAt: 'DESC' },
+      take: RECENT_DONATIONS_LIMIT,
+    });
   }
 
   async findOne(id: string): Promise<Donation> {
