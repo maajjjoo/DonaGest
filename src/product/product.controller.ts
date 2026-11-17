@@ -20,9 +20,9 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
-import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { UuidParamPipe } from '../common/pipes/uuid-param.pipe';
 import { CreateProductDto } from './dto/create-product.dto';
+import { FilterProductDto } from './dto/filter-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Product } from './entities/product.entity';
 import { ProductService } from './product.service';
@@ -50,9 +50,12 @@ export class ProductController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Listar productos con su inventario' })
+  @ApiOperation({
+    summary:
+      'Listar productos con su inventario, filtro por categoría y búsqueda',
+  })
   @ApiPaginatedResponse(Product)
-  findAll(@Query() query: PaginationQueryDto) {
+  findAll(@Query() query: FilterProductDto) {
     return this.productService.findAll(query);
   }
 

@@ -4,8 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ILike, Repository } from 'typeorm';
-import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { FindOptionsWhere, ILike, Repository } from 'typeorm';
 import { escapeLike } from '../common/helpers/escape-like.helper';
 import {
   buildPaginatedResponse,
@@ -14,6 +13,7 @@ import {
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 import { Inventory } from '../inventory/entities/inventory.entity';
 import { CreateProductDto } from './dto/create-product.dto';
+import { FilterProductDto } from './dto/filter-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Product } from './entities/product.entity';
 
@@ -34,11 +34,19 @@ export class ProductService {
     return this.findOne(saved.id);
   }
 
-  async findAll(
-    query: PaginationQueryDto,
-  ): Promise<PaginatedResponse<Product>> {
-    const { page, limit } = query;
+  async findAll(query: FilterProductDto): Promise<PaginatedResponse<Product>> {
+    const { page, limit, category, search } = query;
+    const base: FindOptionsWhere<Product> = category ? { category } : {};
+    const pattern = search ? ILike(`%${escapeLike(search)}%`) : undefined;
+    const where = pattern
+      ? [
+          { ...base, name: pattern },
+          { ...base, description: pattern },
+        ]
+      : base;
+
     const [data, total] = await this.productRepository.findAndCount({
+      where,
       relations: { inventory: true },
       order: { name: 'ASC' },
       skip: getSkip(page, limit),
