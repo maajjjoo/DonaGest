@@ -30,6 +30,7 @@ import {
 import { CreateDeliveryDto } from './dto/create-delivery.dto';
 import { FilterDeliveryDto } from './dto/filter-delivery.dto';
 import { RescheduleDeliveryDto } from './dto/reschedule-delivery.dto';
+import { UpdateDeliveryNotesDto } from './dto/update-delivery-notes.dto';
 import { UpdateDeliveryStatusDto } from './dto/update-delivery-status.dto';
 import { Delivery } from './entities/delivery.entity';
 import { DeliveryStatus } from './enums/delivery-status.enum';
@@ -168,6 +169,15 @@ export class DeliveryService {
     });
 
     return this.findOne(id);
+  }
+
+  async updateNotes(
+    id: string,
+    dto: UpdateDeliveryNotesDto,
+  ): Promise<Delivery> {
+    const delivery = await this.findOne(id);
+    delivery.notes = dto.notes === '' ? null : dto.notes;
+    return this.deliveryRepository.save(delivery);
   }
 
   async findAll(
