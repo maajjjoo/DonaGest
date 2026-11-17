@@ -60,6 +60,17 @@ export class DeliveryController {
     return this.deliveryService.findAll(query);
   }
 
+  @Get('overdue')
+  @ApiOperation({
+    summary: 'Entregas programadas con fecha vencida',
+    description:
+      'Entregas que siguen PROGRAMADAS pero cuya fecha ya pasó (hora de Colombia). Sirve para reprogramarlas o cancelarlas.',
+  })
+  @ApiOkResponse({ type: Delivery, isArray: true })
+  findOverdue() {
+    return this.deliveryService.findOverdue();
+  }
+
   @Get('upcoming')
   @ApiOperation({
     summary: 'Entregas programadas para los próximos 7 días',

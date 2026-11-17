@@ -8,6 +8,7 @@ import {
   Between,
   DataSource,
   FindOptionsWhere,
+  LessThan,
   LessThanOrEqual,
   MoreThanOrEqual,
   Repository,
@@ -217,6 +218,17 @@ export class DeliveryService {
       page: query.page,
       limit: query.limit,
       affectedZoneId: zoneId,
+    });
+  }
+
+  async findOverdue(): Promise<Delivery[]> {
+    return this.deliveryRepository.find({
+      where: {
+        status: DeliveryStatus.PROGRAMADA,
+        scheduledDate: LessThan(getTodayInColombia()),
+      },
+      relations: { affectedZone: true, product: true },
+      order: { scheduledDate: 'ASC', affectedZone: { priority: 'DESC' } },
     });
   }
 
