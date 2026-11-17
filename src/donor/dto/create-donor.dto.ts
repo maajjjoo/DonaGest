@@ -5,10 +5,12 @@ import {
   IsEnum,
   IsNotEmpty,
   IsString,
+  Matches,
   MaxLength,
 } from 'class-validator';
 import { DocumentType } from '../enums/document-type.enum';
 import { DonorType } from '../enums/donor-type.enum';
+import { IsValidDocumentNumber } from '../validators/document-number.validator';
 
 export class CreateDonorDto {
   @ApiProperty({
@@ -30,7 +32,12 @@ export class CreateDonorDto {
   })
   documentType: DocumentType;
 
-  @ApiProperty({ description: 'Número de documento', example: '1020456789' })
+  @ApiProperty({
+    description:
+      'Número de documento. CC y CE: 6 a 10 dígitos; NIT: 9 dígitos con dígito de verificación opcional; PASAPORTE: 6 a 10 letras o números',
+    example: '1020456789',
+  })
+  @IsValidDocumentNumber()
   @IsString({ message: 'El número de documento debe ser un texto' })
   @IsNotEmpty({ message: 'El número de documento es obligatorio' })
   @MaxLength(20, {
@@ -49,10 +56,15 @@ export class CreateDonorDto {
   @MaxLength(150, { message: 'El correo no puede superar 150 caracteres' })
   email: string;
 
-  @ApiProperty({ description: 'Teléfono de contacto', example: '3104567890' })
+  @ApiProperty({
+    description: 'Celular colombiano: 10 dígitos que empiezan por 3',
+    example: '3104567890',
+  })
   @IsString({ message: 'El teléfono debe ser un texto' })
-  @IsNotEmpty({ message: 'El teléfono es obligatorio' })
-  @MaxLength(20, { message: 'El teléfono no puede superar 20 caracteres' })
+  @Matches(/^3\d{9}$/, {
+    message:
+      'El teléfono debe tener 10 dígitos y empezar por 3 (ej: 3104567890)',
+  })
   phone: string;
 
   @ApiProperty({ description: 'Ciudad', example: 'Medellín' })

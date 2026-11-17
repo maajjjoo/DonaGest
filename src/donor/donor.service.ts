@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -14,6 +15,7 @@ import { CreateDonorDto } from './dto/create-donor.dto';
 import { FilterDonorDto } from './dto/filter-donor.dto';
 import { UpdateDonorDto } from './dto/update-donor.dto';
 import { Donor } from './entities/donor.entity';
+import { getDocumentNumberError } from './validators/document-number.validator';
 
 @Injectable()
 export class DonorService {
@@ -67,6 +69,13 @@ export class DonorService {
     const donor = await this.findOne(id);
     await this.ensureUnique(dto.documentNumber, dto.email, id);
     const updated = this.donorRepository.merge(donor, dto);
+    const documentError = getDocumentNumberError(
+      updated.documentType,
+      updated.documentNumber,
+    );
+    if (documentError) {
+      throw new BadRequestException(documentError);
+    }
     return this.donorRepository.save(updated);
   }
 
