@@ -7,6 +7,7 @@ import {
 } from '@nestjs/swagger';
 import { UuidParamPipe } from '../common/pipes/uuid-param.pipe';
 import { SummaryReportDto } from './dto/summary-report.dto';
+import { InventoryByCategoryDto } from './dto/inventory-by-category.dto';
 import { TopDonorDto } from './dto/top-donor.dto';
 import { ZoneReportDto } from './dto/zone-report.dto';
 import { ReportService } from './report.service';
@@ -35,6 +36,17 @@ export class ReportController {
   @ApiOkResponse({ type: TopDonorDto, isArray: true })
   getTopDonors() {
     return this.reportService.getTopDonors();
+  }
+
+  @Get('inventory-by-category')
+  @ApiOperation({
+    summary: 'Unidades disponibles por categoría de producto',
+    description:
+      'Incluye todas las categorías, aunque no tengan productos, y cuántos productos de cada una están en alerta.',
+  })
+  @ApiOkResponse({ type: InventoryByCategoryDto, isArray: true })
+  getInventoryByCategory() {
+    return this.reportService.getInventoryByCategory();
   }
 
   @Get('zones/:id')

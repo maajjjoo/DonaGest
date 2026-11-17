@@ -11,12 +11,14 @@ import { DonationStatus } from '../donation/enums/donation-status.enum';
 import { Donor } from '../donor/entities/donor.entity';
 import { DonorType } from '../donor/enums/donor-type.enum';
 import { Inventory } from '../inventory/entities/inventory.entity';
+import { ProductCategory } from '../product/enums/product-category.enum';
 import { ProductUnit } from '../product/enums/product-unit.enum';
 import {
   DeliveriesByStatusDto,
   SummaryReportDto,
   ZonesByPriorityDto,
 } from './dto/summary-report.dto';
+import { InventoryByCategoryDto } from './dto/inventory-by-category.dto';
 import { TopDonorDto } from './dto/top-donor.dto';
 import { ZoneReportDto } from './dto/zone-report.dto';
 
@@ -202,5 +204,35 @@ export class ReportService {
       unitsDonated: Number(row.unitsDonated),
       donationsCount: Number(row.donationsCount),
     }));
+  }
+
+  async getInventoryByCategory(): Promise<InventoryByCategoryDto[]> {
+    const rows = await this.inventoryRepository
+      .createQueryBuilder('inventory')
+      .innerJoin('inventory.product', 'product')
+      .select('product.category', 'category')
+      .addSelect('COUNT(product.id)', 'productsCount')
+      .addSelect('SUM(inventory.availableQuantity)', 'availableUnits')
+      .addSelect(
+        'SUM(CASE WHEN inventory.availableQuantity <= inventory.minimumStock THEN 1 ELSE 0 END)',
+        'productsInAlert',
+      )
+      .groupBy('product.category')
+      .getRawMany<{
+        category: ProductCategory;
+        productsCount: string;
+        availableUnits: string;
+        productsInAlert: string;
+      }>();
+
+    return Object.values(ProductCategory).map((category) => {
+      const row = rows.find((item) => item.category === category);
+      return {
+        category,
+        productsCount: Number(row?.productsCount ?? 0),
+        availableUnits: Number(row?.availableUnits ?? 0),
+        productsInAlert: Number(row?.productsInAlert ?? 0),
+      };
+    });
   }
 }
