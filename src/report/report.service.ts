@@ -235,4 +235,21 @@ export class ReportService {
       };
     });
   }
+
+  async getZonesWithoutDeliveries(): Promise<AffectedZone[]> {
+    return this.zoneRepository
+      .createQueryBuilder('zone')
+      .where('zone.isActive = true')
+      .andWhere(
+        `NOT EXISTS (
+          SELECT 1 FROM deliveries delivery
+          WHERE delivery.affected_zone_id = zone.id
+          AND delivery.status <> :cancelled
+        )`,
+        { cancelled: DeliveryStatus.CANCELADA },
+      )
+      .orderBy('zone.priority', 'DESC')
+      .addOrderBy('zone.affectedFamilies', 'DESC')
+      .getMany();
+  }
 }

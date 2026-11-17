@@ -10,6 +10,7 @@ import { SummaryReportDto } from './dto/summary-report.dto';
 import { InventoryByCategoryDto } from './dto/inventory-by-category.dto';
 import { TopDonorDto } from './dto/top-donor.dto';
 import { ZoneReportDto } from './dto/zone-report.dto';
+import { AffectedZone } from '../affected-zone/entities/affected-zone.entity';
 import { ReportService } from './report.service';
 
 @ApiTags('Reportes')
@@ -47,6 +48,17 @@ export class ReportController {
   @ApiOkResponse({ type: InventoryByCategoryDto, isArray: true })
   getInventoryByCategory() {
     return this.reportService.getInventoryByCategory();
+  }
+
+  @Get('zones-without-deliveries')
+  @ApiOperation({
+    summary: 'Zonas activas que todavía no tienen entregas',
+    description:
+      'Las entregas canceladas no cuentan. Se ordenan de prioridad CRITICA a BAJA y luego por familias afectadas, para saber a dónde enviar ayuda primero.',
+  })
+  @ApiOkResponse({ type: AffectedZone, isArray: true })
+  getZonesWithoutDeliveries() {
+    return this.reportService.getZonesWithoutDeliveries();
   }
 
   @Get('zones/:id')
